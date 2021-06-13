@@ -1,9 +1,7 @@
 package com.unciv.logic.city
 
-import com.unciv.Constants
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.stats.INamed
-import com.unciv.models.translations.tr
 import com.unciv.ui.utils.Fonts
 import kotlin.math.roundToInt
 
@@ -12,17 +10,15 @@ interface IConstruction : INamed {
     fun getGoldCost(civInfo: CivilizationInfo): Int
     fun isBuildable(cityConstructions: CityConstructions): Boolean
     fun shouldBeDisplayed(cityConstructions: CityConstructions): Boolean
-    fun postBuildEvent(construction: CityConstructions, wasBought: Boolean = false): Boolean  // Yes I'm hilarious.
-    fun getResource(): String?
+    fun postBuildEvent(cityConstructions: CityConstructions, wasBought: Boolean = false): Boolean  // Yes I'm hilarious.
+    fun getResourceRequirements(): HashMap<String,Int>
     fun canBePurchased(): Boolean
 }
 
 
 
 open class PerpetualConstruction(override var name: String, val description: String) : IConstruction {
-    override fun shouldBeDisplayed(cityConstructions: CityConstructions): Boolean {
-        return isBuildable(cityConstructions)
-    }
+    override fun shouldBeDisplayed(cityConstructions: CityConstructions) = isBuildable(cityConstructions)
     open fun getProductionTooltip(cityInfo: CityInfo) : String
             = "\r\n${(cityInfo.cityStats.currentCityStats.production / CONVERSION_RATE).roundToInt()}/${Fonts.turn}"
     open fun getConversionRate(cityInfo: CityInfo) : Int
@@ -32,7 +28,7 @@ open class PerpetualConstruction(override var name: String, val description: Str
         const val CONVERSION_RATE: Int = 4
         val science = object : PerpetualConstruction("Science", "Convert production to science at a rate of [rate] to 1") {
             override fun isBuildable(cityConstructions: CityConstructions): Boolean {
-                return cityConstructions.cityInfo.civInfo.tech.getTechUniques().contains("Enables conversion of city production to science")
+                return cityConstructions.cityInfo.civInfo.hasUnique("Enables conversion of city production to science")
             }
             override fun getProductionTooltip(cityInfo: CityInfo): String {
                 return "\r\n${(cityInfo.cityStats.currentCityStats.production / getConversionRate(cityInfo)).roundToInt()}/${Fonts.turn}"
@@ -41,7 +37,7 @@ open class PerpetualConstruction(override var name: String, val description: Str
         }
         val gold = object : PerpetualConstruction("Gold", "Convert production to gold at a rate of $CONVERSION_RATE to 1") {
             override fun isBuildable(cityConstructions: CityConstructions): Boolean {
-                return cityConstructions.cityInfo.civInfo.tech.getTechUniques().contains("Enables conversion of city production to gold")
+                return cityConstructions.cityInfo.civInfo.hasUnique("Enables conversion of city production to gold")
             }
         }
         val idle = object : PerpetualConstruction("Nothing", "The city will not produce anything.") {
@@ -54,26 +50,18 @@ open class PerpetualConstruction(override var name: String, val description: Str
                 = mapOf(science.name to science, gold.name to gold, idle.name to idle)
     }
 
-    override fun canBePurchased(): Boolean {
-        return false
-    }
+    override fun canBePurchased() = false
 
-    override fun getProductionCost(civInfo: CivilizationInfo): Int {
-        throw Exception("Impossible!")
-    }
+    override fun getProductionCost(civInfo: CivilizationInfo) = throw Exception("Impossible!")
 
-    override fun getGoldCost(civInfo: CivilizationInfo): Int {
-        throw Exception("Impossible!")
-    }
+    override fun getGoldCost(civInfo: CivilizationInfo) = throw Exception("Impossible!")
 
-    override fun isBuildable(cityConstructions: CityConstructions): Boolean {
-        throw Exception("Impossible!")
-    }
+    override fun isBuildable(cityConstructions: CityConstructions): Boolean =
+            throw Exception("Impossible!")
 
-    override fun postBuildEvent(construction: CityConstructions, wasBought: Boolean): Boolean {
-        throw Exception("Impossible!")
-    }
+    override fun postBuildEvent(cityConstructions: CityConstructions, wasBought: Boolean) =
+            throw Exception("Impossible!")
 
-    override fun getResource(): String? =null
+    override fun getResourceRequirements(): HashMap<String, Int> = hashMapOf()
 
 }

@@ -3,14 +3,12 @@ package com.unciv.ui.utils
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.TextureData
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.BitmapFont.BitmapFontData
 import com.badlogic.gdx.graphics.g2d.BitmapFont.Glyph
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.PixmapPacker
 import com.badlogic.gdx.graphics.g2d.TextureRegion
-import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.utils.Array
 import com.badlogic.gdx.utils.Disposable
 import com.unciv.UncivGame
@@ -22,6 +20,7 @@ interface NativeFontImplementation {
 
 // This class is loosely based on libgdx's FreeTypeBitmapFontData
 class NativeBitmapFontData(val fontImplementation: NativeFontImplementation) : BitmapFontData(), Disposable {
+
     val regions: Array<TextureRegion>
 
     private var dirty = false
@@ -56,7 +55,6 @@ class NativeBitmapFontData(val fontImplementation: NativeFontImplementation) : B
     override fun getGlyph(ch: Char): Glyph {
         var glyph: Glyph? = super.getGlyph(ch)
         if (glyph == null) {
-            if(ch == '\uD83D' || ch == '\uD83C' ) return Glyph() // This is the 'first character' of an emoji - empty space
             val charPixmap = getPixmapFromChar(ch)
 
             glyph = Glyph()
@@ -83,12 +81,14 @@ class NativeBitmapFontData(val fontImplementation: NativeFontImplementation) : B
     }
 
     private fun getPixmapFromChar(ch: Char): Pixmap {
+        // Images must be 50*50px so they're rendered at the same height as the text - see Fonts.ORIGINAL_FONT_SIZE
         return when (ch) {
-            Fonts.strength[1] -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/Strength").region)
-            Fonts.rangedStrength[1] -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/RangedStrength").region)
-            Fonts.range[1] -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/Range").region)
+            Fonts.strength -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/Strength").region)
+            Fonts.rangedStrength -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/RangedStrength").region)
+            Fonts.range -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/Range").region)
             Fonts.movement -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/Movement").region)
             Fonts.turn -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Turn").region)
+            Fonts.production -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Production").region)
             else -> fontImplementation.getCharPixmap(ch)
         }
     }
@@ -105,14 +105,21 @@ class NativeBitmapFontData(val fontImplementation: NativeFontImplementation) : B
     override fun dispose() {
         packer.dispose()
     }
+
 }
 
 object Fonts {
-    val font by lazy {
+
+    /** All text is originally rendered in 50px (set in AndroidLauncher and DesktopLauncher), and thn scaled to fit the size of the text we need now.
+     * This has several advantages: It means we only render each character once (good for both runtime and RAM),
+     * AND it means that our 'custom' emojis only need to be once size (50px) and they'll be rescaled for what's needed. */
+    const val ORIGINAL_FONT_SIZE = 50f
+
+    lateinit var font:BitmapFont
+    fun resetFont() {
         val fontData = NativeBitmapFontData(UncivGame.Current.fontImplementation!!)
-        val font = BitmapFont(fontData, fontData.regions, false)
+        font = BitmapFont(fontData, fontData.regions, false)
         font.setOwnsTexture(true)
-        font
     }
 
     // From https://stackoverflow.com/questions/29451787/libgdx-textureregion-to-pixmap
@@ -138,13 +145,11 @@ object Fonts {
         return pixmap
     }
 
-    const val food = "\uD83C\uDF4E"
-    const val gold = "\uD83D\uDCB0"
-    const val turn = '⏳'
-    const val strength = "\uD83D\uDCAA"
-    const val rangedStrength = "\uD83C\uDFF9"
-    const val movement = '➡'
-    const val range = "\uD83D\uDCCF"
 
-//    const val production = '⚙'
+    const val turn = '⏳'               // U+23F3 'hourglass'
+    const val strength = '†'            // U+2020 'dagger'
+    const val rangedStrength = '‡'      // U+2021 'double dagger'
+    const val movement = '➡'            // U+27A1 'black rightwards arrow'
+    const val range = '…'               // U+2026 'horizontal ellipsis'
+    const val production = '⚙'          // U+2699 'gear'
 }

@@ -2,6 +2,7 @@ package com.unciv.logic.battle
 
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.TileInfo
+import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.unit.UnitType
 
 interface ICombatant{
@@ -17,11 +18,13 @@ interface ICombatant{
     fun getTile(): TileInfo
     fun isInvisible(): Boolean
     fun canAttack(): Boolean
+    fun matchesCategory(category:String): Boolean
+    fun getAttackSound(): UncivSound
 
     fun isMelee(): Boolean {
-        return this.getUnitType().isMelee()
+        return getUnitType().isMelee()
     }
     fun isRanged(): Boolean {
-        return this.getUnitType().isRanged()
+        return getUnitType().isRanged()
     }
 }

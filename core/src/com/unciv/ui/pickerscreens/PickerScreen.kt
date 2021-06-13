@@ -1,19 +1,23 @@
 package com.unciv.ui.pickerscreens
 
-import com.unciv.ui.utils.AutoScrollPane as ScrollPane
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.unciv.Constants
 import com.unciv.UncivGame
-import com.unciv.models.translations.tr
 import com.unciv.ui.utils.*
+import com.unciv.ui.utils.AutoScrollPane as ScrollPane
 
-open class PickerScreen : CameraStageBaseScreen() {
+open class PickerScreen(val disableScroll: Boolean = false) : CameraStageBaseScreen() {
 
     internal var closeButton: TextButton = Constants.close.toTextButton()
     protected var descriptionLabel: Label
     protected var rightSideGroup = VerticalGroup()
     protected var rightSideButton: TextButton
     private var screenSplit = 0.85f
+
+    /**
+     * The table displaying the choices from which to pick (usually).
+     * Also the element which most of the screen realestate is devoted to displaying.
+     */
     protected var topTable: Table
     var bottomTable:Table = Table()
     internal var splitPane: SplitPane
@@ -23,8 +27,8 @@ open class PickerScreen : CameraStageBaseScreen() {
         bottomTable.add(closeButton).pad(10f)
 
         descriptionLabel = "".toLabel()
-        descriptionLabel.setWrap(true)
-        val labelScroll = ScrollPane(descriptionLabel)
+        descriptionLabel.wrap = true
+        val labelScroll = ScrollPane(descriptionLabel,skin)
         bottomTable.add(labelScroll).pad(5f).fill().expand()
 
         rightSideButton = "".toTextButton()
@@ -37,6 +41,7 @@ open class PickerScreen : CameraStageBaseScreen() {
         topTable = Table()
         scrollPane = ScrollPane(topTable)
 
+        scrollPane.setScrollingDisabled(disableScroll, disableScroll)
         scrollPane.setSize(stage.width, stage.height * screenSplit)
 
         splitPane = SplitPane(scrollPane, bottomTable, true, skin)
@@ -46,11 +51,13 @@ open class PickerScreen : CameraStageBaseScreen() {
     }
 
     fun setDefaultCloseAction(previousScreen: CameraStageBaseScreen?=null) {
-        closeButton.onClick {
-            if(previousScreen!=null) game.setScreen(previousScreen)
+        val closeAction = {
+            if (previousScreen != null) game.setScreen(previousScreen)
             else game.setWorldScreen()
             dispose()
         }
+        closeButton.onClick(closeAction)
+        onBackButtonClicked(closeAction)
     }
 
     fun setRightSideButtonEnabled(bool: Boolean) {
@@ -59,7 +66,7 @@ open class PickerScreen : CameraStageBaseScreen() {
     }
 
     protected fun pick(rightButtonText: String) {
-        if(UncivGame.Current.worldScreen.isPlayersTurn) rightSideButton.enable()
+        if (UncivGame.Current.worldScreen.isPlayersTurn) rightSideButton.enable()
         rightSideButton.setText(rightButtonText)
     }
 

@@ -3,7 +3,6 @@ package com.unciv.ui.pickerscreens
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.unciv.UncivGame
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.Tutorial
@@ -25,25 +24,26 @@ class PolicyPickerScreen(val worldScreen: WorldScreen, civInfo: CivilizationInfo
 
         rightSideButton.setText("{Adopt policy}\r\n(".tr() + policies.storedCulture + "/" + policies.getCultureNeededForNextPolicy() + ")")
 
+        if (viewingCiv.gameInfo.ruleSet.policies.values.all { it.name in policies.adoptedPolicies })
+            rightSideButton.setText("All policies adopted".tr())
+
         setDefaultCloseAction()
         if (policies.freePolicies > 0) {
             rightSideButton.setText("Adopt free policy".tr())
             if (policies.canAdoptPolicy()) closeButton.disable()
-        }
-        else onBackButtonClicked { UncivGame.Current.setWorldScreen() }
+        } else onBackButtonClicked { UncivGame.Current.setWorldScreen() }
 
         rightSideButton.onClick(UncivSound.Policy) {
             viewingCiv.policies.adopt(pickedPolicy!!)
 
             // If we've moved to another screen in the meantime (great person pick, victory screen) ignore this
-            if(game.screen !is PolicyPickerScreen || !policies.canAdoptPolicy()){
+            if (game.screen !is PolicyPickerScreen || !policies.canAdoptPolicy()) {
                 game.setWorldScreen()
                 dispose()
-            }
-            else game.setScreen(PolicyPickerScreen(worldScreen))  // update policies
+            } else game.setScreen(PolicyPickerScreen(worldScreen))  // update policies
         }
 
-        if(!UncivGame.Current.worldScreen.canChangeState)
+        if (!UncivGame.Current.worldScreen.canChangeState)
             rightSideButton.disable()
 
         topTable.row().pad(30f)
@@ -104,9 +104,9 @@ class PolicyPickerScreen(val worldScreen: WorldScreen, civInfo: CivilizationInfo
 
         if (!policy.name.endsWith("Complete")) {
             if (policy.requires!!.isNotEmpty())
-                policyText += "{Requires} ".tr() + policy.requires!!.joinToString { it.tr() }
+                policyText += "Requires [" + policy.requires!!.joinToString { it.tr() } + "]"
             else
-                policyText += ("{Unlocked at} {" + policy.branch.era + "}").tr()
+                policyText += "{Unlocked at} {" + policy.branch.era + "}"
         }
         descriptionLabel.setText(policyText.joinToString("\r\n") { it.tr() })
     }
@@ -120,13 +120,10 @@ class PolicyPickerScreen(val worldScreen: WorldScreen, civInfo: CivilizationInfo
             policyButton = policy.name.toTextButton()
         }
 
-        if (viewingCiv.policies.isAdopted(policy.name)) { // existing
-            policyButton.color = Color.GREEN
-        } else if (!viewingCiv.policies.isAdoptable(policy))
-        // non-available
-        {
-            policyButton.color = Color.GRAY
-        }
+        if (viewingCiv.policies.isAdopted(policy.name)) policyButton.color = Color.GREEN // existing
+        else if (!viewingCiv.policies.isAdoptable(policy)) policyButton.color = Color.GRAY // non-available
+
+
         policyButton.onClick { pickPolicy(policy) }
         policyButton.pack()
         return policyButton

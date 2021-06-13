@@ -6,13 +6,17 @@ import com.unciv.UncivGame
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.UncivSound
 import com.unciv.models.stats.Stats
+import com.unciv.models.translations.tr
+import com.unciv.ui.civilopedia.CivilopediaScreen
+import com.unciv.ui.civilopedia.MarkupRenderer
 import com.unciv.ui.utils.*
 import kotlin.math.roundToInt
 
-class CityScreenTileTable(val cityScreen: CityScreen): Table(){
-    val innerTable = Table()
+class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
+    private val innerTable = Table()
     val city = cityScreen.city
-    init{
+
+    init {
         innerTable.background = ImageGetter.getBackground(ImageGetter.getBlue().lerp(Color.BLACK, 0.5f))
         add(innerTable).pad(2f).fill()
         background = ImageGetter.getBackground(Color.WHITE)
@@ -20,45 +24,47 @@ class CityScreenTileTable(val cityScreen: CityScreen): Table(){
 
     fun update(selectedTile: TileInfo?) {
         innerTable.clear()
-        if (selectedTile == null){
-            isVisible=false
+        if (selectedTile == null) {
+            isVisible = false
             return
         }
-        isVisible=true
+        isVisible = true
         innerTable.clearChildren()
 
         val stats = selectedTile.getTileStats(city, city.civInfo)
-        innerTable.pad(20f)
+        innerTable.pad(5f)
 
-        innerTable.add(selectedTile.toString(city.civInfo).toLabel()).colspan(2)
+        innerTable.add( MarkupRenderer.render(selectedTile.toMarkup(city.civInfo)) {
+            // Sorry, this will leave the city screen
+            UncivGame.Current.setScreen(CivilopediaScreen(city.civInfo.gameInfo.ruleSet, link = it))
+        } )
         innerTable.row()
         innerTable.add(getTileStatsTable(stats)).row()
 
-        if(selectedTile.getOwner()==null && selectedTile.neighbors.any {it.getCity()==city}
-            && selectedTile in city.tilesInRange){
+        if (selectedTile.getOwner() == null && selectedTile.neighbors.any { it.getCity() == city }
+                && selectedTile in city.tilesInRange) {
             val goldCostOfTile = city.expansion.getGoldCostOfTile(selectedTile)
 
             val buyTileButton = "Buy for [$goldCostOfTile] gold".toTextButton()
             buyTileButton.onClick(UncivSound.Coin) {
-                city.expansion.buyTile(selectedTile)
-                UncivGame.Current.setScreen(CityScreen(city))
+                val purchasePrompt = "Currently you have [${city.civInfo.gold}] gold.".tr() + "\n" +
+                        "Would you like to purchase [Tile] for [$goldCostOfTile] gold?".tr()
+                YesNoPopup(purchasePrompt, { city.expansion.buyTile(selectedTile);UncivGame.Current.setScreen(CityScreen(city)) }, cityScreen).open()
             }
-            if((goldCostOfTile>city.civInfo.gold && !city.civInfo.gameInfo.gameParameters.godMode)
+            val canPurchase = goldCostOfTile == 0 || city.civInfo.gold >= goldCostOfTile
+            if (!canPurchase && !city.civInfo.gameInfo.gameParameters.godMode
                     || city.isPuppet
                     || !cityScreen.canChangeState)
                 buyTileButton.disable()
 
-            innerTable.add(buyTileButton).row()
-            innerTable.add("You have [${city.civInfo.gold}] gold".toLabel(Color.YELLOW, 16)).padTop(2f)
+            innerTable.add(buyTileButton).padTop(5f).row()
         }
 
-        if(city.civInfo.cities.filterNot { it==city }
-                        .any { it.workedTiles.contains(selectedTile.position) }) {
+        if (city.civInfo.cities.filterNot { it == city }.any { it.isWorked(selectedTile) })
             innerTable.add("Worked by [${selectedTile.getWorkingCity()!!.name}]".toLabel()).row()
-        }
 
-        if(city.workedTiles.contains(selectedTile.position)){
-            if(selectedTile.isLocked()) {
+        if (city.isWorked(selectedTile)) {
+            if (selectedTile.isLocked()) {
                 val unlockButton = "Unlock".toTextButton()
                 unlockButton.onClick {
                     city.lockedTiles.remove(selectedTile.position)
@@ -66,9 +72,8 @@ class CityScreenTileTable(val cityScreen: CityScreen): Table(){
                     cityScreen.update()
                 }
                 if (!cityScreen.canChangeState) unlockButton.disable()
-                innerTable.add(unlockButton).row()
-            }
-            else {
+                innerTable.add(unlockButton).padTop(5f).row()
+            } else {
                 val lockButton = "Lock".toTextButton()
                 lockButton.onClick {
                     city.lockedTiles.add(selectedTile.position)
@@ -76,9 +81,12 @@ class CityScreenTileTable(val cityScreen: CityScreen): Table(){
                     cityScreen.update()
                 }
                 if (!cityScreen.canChangeState) lockButton.disable()
-                innerTable.add(lockButton).row()
+                innerTable.add(lockButton).padTop(5f).row()
             }
         }
+        if (selectedTile.isCityCenter() && selectedTile.getCity() != city && selectedTile.getCity()!!.civInfo == city.civInfo)
+            innerTable.add("Move to city".toTextButton().onClick { cityScreen.game.setScreen(CityScreen(selectedTile.getCity()!!)) })
+
         innerTable.pack()
         pack()
     }

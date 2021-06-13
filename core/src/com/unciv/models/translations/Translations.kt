@@ -32,6 +32,10 @@ class Translations : LinkedHashMap<String, TranslationEntry>(){
 
     private var modsWithTranslations: HashMap<String, Translations> = hashMapOf() // key == mod name
 
+    // used by tr() whenever GameInfo not initialized (allowing new game screen to use mod translations)
+    var translationActiveMods = LinkedHashSet<String>()
+
+
     /**
      * Searches for the translation entry of a given [text] for a given [language].
      * This includes translations provided by mods from [activeMods]
@@ -222,8 +226,9 @@ val curlyBraceRegex = Regex("""\{([^}]*)\}""")
  *                  but with placeholder or sentence brackets removed.
  */
 fun String.tr(): String {
-    val activeMods = if (UncivGame.Current.isGameInfoInitialized())
-        UncivGame.Current.gameInfo.gameParameters.mods else null
+    val activeMods = with(UncivGame.Current) {
+        if (isGameInfoInitialized()) gameInfo.gameParameters.mods else translations.translationActiveMods
+    }
 
     // There might still be optimization potential here!
     if (contains("[")) { // Placeholders!
@@ -283,3 +288,15 @@ fun String.equalsPlaceholderText(str:String): Boolean {
 }
 
 fun String.getPlaceholderParameters() = squareBraceRegex.findAll(this).map { it.groups[1]!!.value }.toList()
+
+/** Substitutes placeholders with [strings], respecting order of appearance. */
+fun String.fillPlaceholders(vararg strings: String): String {
+    val keys = this.getPlaceholderParameters()
+    if (keys.size > strings.size)
+        throw Exception("String $this has a different number of placeholders ${keys.joinToString()} (${keys.size}) than the substitutive strings ${strings.joinToString()} (${strings.size})!")
+
+    var filledString = this
+    for (i in keys.indices)
+        filledString = filledString.replaceFirst(keys[i], strings[i])
+    return filledString
+}

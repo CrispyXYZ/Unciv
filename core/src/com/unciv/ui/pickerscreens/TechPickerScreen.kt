@@ -28,7 +28,7 @@ class TechPickerScreen(internal val civInfo: CivilizationInfo, centerOnTech: Tec
 
     /** We need this to be a separate table, and NOT the topTable, because *inhales*
      * When call setConnectingLines we need to pack() the table so that the lines will align correctly, BUT
-     *  this causes the table to be SMALLER THAN THE SCREEN for small tech trees e.g. scenarios,
+     *  this causes the table to be SMALLER THAN THE SCREEN for small tech trees from mods,
      *  meaning the tech tree is in a crumpled heap at the lower-left corner of the screen
      * Having this be a separate table allows us to leave the TopTable as is (that is: auto-width to fit the scrollPane)
      *  leaving us the juicy small tech tree right in the center.
@@ -93,21 +93,23 @@ class TechPickerScreen(internal val civInfo: CivilizationInfo, centerOnTech: Tec
 
     private fun createTechTable() {
         val allTechs = civInfo.gameInfo.ruleSet.technologies.values
-        val columns = allTechs.map { it.column!!.columnNumber }.max()!! + 1
-        val techMatrix = Array<Array<Technology?>>(columns) { arrayOfNulls(10) } // Divided into columns, then rows
+        if (allTechs.isEmpty()) return
+        val columns = allTechs.map { it.column!!.columnNumber }.maxOrNull()!! + 1
+        val rows = allTechs.map { it.row }.maxOrNull()!! + 1
+        val techMatrix = Array<Array<Technology?>>(columns) { arrayOfNulls(rows) } // Divided into columns, then rows
 
         for (technology in allTechs) {
             techMatrix[technology.column!!.columnNumber][technology.row - 1] = technology
         }
 
         val erasNamesToColumns = LinkedHashMap<String, ArrayList<Int>>()
-        for(tech in allTechs) {
+        for (tech in allTechs) {
             val era = tech.era()
             if (!erasNamesToColumns.containsKey(era)) erasNamesToColumns[era] = ArrayList()
             val columnNumber = tech.column!!.columnNumber
             if (!erasNamesToColumns[era]!!.contains(columnNumber)) erasNamesToColumns[era]!!.add(columnNumber)
         }
-        var i=0
+        var i = 0
         for ((era, columns) in erasNamesToColumns) {
             val columnSpan = columns.size
             val color = if (i % 2 == 0) Color.BLUE else Color.FIREBRICK
@@ -115,7 +117,7 @@ class TechPickerScreen(internal val civInfo: CivilizationInfo, centerOnTech: Tec
             techTable.add(era.toLabel().addBorder(2f, color)).fill().colspan(columnSpan)
         }
 
-        for (rowIndex in 0..9) {
+        for (rowIndex in 0..rows - 1) {
             techTable.row().pad(5f).padRight(40f)
 
             for (columnIndex in techMatrix.indices) {
@@ -149,7 +151,7 @@ class TechPickerScreen(internal val civInfo: CivilizationInfo, centerOnTech: Tec
             var text = techName.tr()
 
             if (techName == selectedTech?.name) {
-                techButton.color = techButton.color.cpy().lerp(Color.LIGHT_GRAY, 0.5f)
+                techButton.color = techButton.color.cpy().lerp(Color.BLACK, 0.5f)
             }
 
             if (tempTechsToResearch.contains(techName) && tempTechsToResearch.size > 1) {
@@ -173,10 +175,16 @@ class TechPickerScreen(internal val civInfo: CivilizationInfo, centerOnTech: Tec
         lines.clear()
 
         for (tech in civInfo.gameInfo.ruleSet.technologies.values) {
-            if (!techNameToButton.containsKey(tech.name))
-                throw Exception("tech ${tech.name} not found!")
+            if (!techNameToButton.containsKey(tech.name)) {
+                ToastPopup("Tech ${tech.name} appears to be missing - perhaps two techs have the same row & column", this)
+                continue
+            }
             val techButton = techNameToButton[tech.name]!!
             for (prerequisite in tech.prerequisites) {
+                if (!techNameToButton.containsKey(prerequisite)) {
+                    ToastPopup("Tech $prerequisite. prerequisite of ${tech.name}, appears to be missing - perhaps two techs have the same row & column", this)
+                    continue
+                }
                 val prerequisiteButton = techNameToButton[prerequisite]!!
                 val techButtonCoords = Vector2(0f, techButton.height / 2)
                 techButton.localToStageCoordinates(techButtonCoords)
@@ -192,11 +200,13 @@ class TechPickerScreen(internal val civInfo: CivilizationInfo, centerOnTech: Tec
                 val lineColor = when {
                     civTech.isResearched(tech.name) && !tech.isContinuallyResearchable() -> researchedTechColor
                     civTech.isResearched(prerequisite) -> researchableTechColor
+                    tempTechsToResearch.contains(tech.name) -> queuedTechColor
                     else -> Color.GRAY
                 }
                 line.color = lineColor
 
                 techTable.addActor(line)
+                line.toBack()
                 lines.add(line)
             }
         }
@@ -240,10 +250,17 @@ class TechPickerScreen(internal val civInfo: CivilizationInfo, centerOnTech: Tec
             return
         }
 
-
+        val pathToTech = civTech.getRequiredTechsToDestination(tech)
+        for (requiredTech in pathToTech)
+            for (unique in requiredTech.uniqueObjects)
+                if (unique.placeholderText == "Incompatible with []" && civTech.isResearched(unique.params[0])) {
+                    rightSideButton.setText(unique.text.tr())
+                    rightSideButton.disable()
+                    return
+                }
 
         tempTechsToResearch.clear()
-        tempTechsToResearch.addAll(civTech.getRequiredTechsToDestination(tech))
+        tempTechsToResearch.addAll(pathToTech.map { it.name })
 
         pick("Research [${tempTechsToResearch[0]}]".tr())
         setButtonsInfo()

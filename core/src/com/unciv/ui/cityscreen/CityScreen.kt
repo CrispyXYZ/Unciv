@@ -2,12 +2,9 @@ package com.unciv.ui.cityscreen
 
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.scenes.scene2d.InputEvent
-import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
-import com.unciv.logic.HexMath
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.IConstruction
 import com.unciv.logic.map.TileInfo
@@ -20,7 +17,6 @@ import com.unciv.ui.utils.AutoScrollPane as ScrollPane
 class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
     var selectedTile: TileInfo? = null
     var selectedConstruction: IConstruction? = null
-    var keyListener: InputListener? = null
 
     /** Toggles or adds/removes all state changing buttons */
     val canChangeState = UncivGame.Current.worldScreen.canChangeState
@@ -31,7 +27,7 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
     // Clockwise from the top-left
 
     /** Displays current production, production queue and available productions list - sits on LEFT */
-    private var constructionsTable = ConstructionsTable(this)
+    private var constructionsTable = CityConstructionsTable(this)
 
     /** Displays stats, buildings, specialists and stats drilldown - sits on TOP LEFT, can be toggled to */
     private var cityInfoTable = CityInfoTable(this)
@@ -52,7 +48,7 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
     private var cityPickerTable = CityScreenCityPickerTable(this)
 
     /** Button for exiting the city - sits on BOTTOM CENTER */
-    val exitCityButton = "Exit city".toTextButton().apply {
+    private val exitCityButton = "Exit city".toTextButton().apply {
         labelCell.pad(10f)
         onClick { exit() }
     }
@@ -76,8 +72,8 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
         stage.addActor(cityInfoTable)
         update()
 
-        keyListener = getKeyboardListener()
-        stage.addListener(keyListener)
+        keyPressDispatcher[Input.Keys.LEFT] = { page(-1) }
+        keyPressDispatcher[Input.Keys.RIGHT] = { page(1) }
     }
 
     internal fun update() {
@@ -101,7 +97,7 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
         exitCityButton.y = 10f
         cityPickerTable.update()
         cityPickerTable.centerX(stage)
-        cityPickerTable.setY(exitCityButton.top+10f, Align.bottom)
+        cityPickerTable.setY(exitCityButton.top + 10f, Align.bottom)
 
         tileTable.update(selectedTile)
         tileTable.setPosition(stage.width - 5f, 5f, Align.bottomRight)
@@ -110,7 +106,7 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
         selectedConstructionTable.setPosition(stage.width - 5f, 5f, Align.bottomRight)
 
         cityStatsTable.update()
-        cityStatsTable.setPosition( stage.width - 5f, stage.height - 5f, Align.topRight)
+        cityStatsTable.setPosition(stage.width - 5f, stage.height - 5f, Align.topRight)
 
         updateAnnexAndRazeCityButton()
         updateTileGroups()
@@ -120,9 +116,17 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
         val nextTile = city.expansion.chooseNewTileToOwn()
         for (tileGroup in tileGroups) {
             tileGroup.update()
-            if(tileGroup.tileInfo == nextTile){
+            tileGroup.hideCircle()
+            if (city.tiles.contains(tileGroup.tileInfo.position)
+                    && constructionsTable.improvementBuildingToConstruct != null) {
+                val improvement = constructionsTable.improvementBuildingToConstruct!!.getImprovement(city.getRuleset())!!
+                if (tileGroup.tileInfo.canBuildImprovement(improvement, city.civInfo))
+                    tileGroup.showCircle(Color.GREEN)
+                else tileGroup.showCircle(Color.RED)
+            }
+            if (tileGroup.tileInfo == nextTile) {
                 tileGroup.showCircle(Color.PURPLE)
-                tileGroup.setColor(0f,0f,0f,0.7f)
+                tileGroup.setColor(0f, 0f, 0f, 0.7f)
             }
         }
     }
@@ -130,7 +134,7 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
     private fun updateAnnexAndRazeCityButton() {
         razeCityButtonHolder.clear()
 
-        if(city.isPuppet) {
+        if (city.isPuppet) {
             val annexCityButton = "Annex city".toTextButton()
             annexCityButton.labelCell.pad(10f)
             annexCityButton.onClick {
@@ -139,19 +143,19 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
             }
             if (!canChangeState) annexCityButton.disable()
             razeCityButtonHolder.add(annexCityButton).colspan(cityPickerTable.columns)
-        } else if(!city.isBeingRazed) {
+        } else if (!city.isBeingRazed) {
             val razeCityButton = "Raze city".toTextButton()
             razeCityButton.labelCell.pad(10f)
-            razeCityButton.onClick { city.isBeingRazed=true; update() }
-            if(!canChangeState || city.isOriginalCapital)
+            razeCityButton.onClick { city.isBeingRazed = true; update() }
+            if (!canChangeState || city.isOriginalCapital)
                 razeCityButton.disable()
 
             razeCityButtonHolder.add(razeCityButton).colspan(cityPickerTable.columns)
         } else {
             val stopRazingCityButton = "Stop razing city".toTextButton()
             stopRazingCityButton.labelCell.pad(10f)
-            stopRazingCityButton.onClick { city.isBeingRazed=false; update() }
-            if(!canChangeState) stopRazingCityButton.disable()
+            stopRazingCityButton.onClick { city.isBeingRazed = false; update() }
+            if (!canChangeState) stopRazingCityButton.disable()
             razeCityButtonHolder.add(stopRazingCityButton).colspan(cityPickerTable.columns)
         }
         razeCityButtonHolder.pack()
@@ -167,7 +171,7 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
         val tileSetStrings = TileSetStrings()
         val cityTileGroups = cityInfo.getCenterTile().getTilesInDistance(5)
                 .filter { city.civInfo.exploredTiles.contains(it.position) }
-                .map { CityTileGroup(cityInfo, it, tileSetStrings).apply { unitLayerGroup.isVisible = false } }
+                .map { CityTileGroup(cityInfo, it, tileSetStrings) }
 
         for (tileGroup in cityTileGroups) {
             val tileInfo = tileGroup.tileInfo
@@ -175,10 +179,25 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
             tileGroup.onClick {
                 if (city.isPuppet) return@onClick
 
+                if (constructionsTable.improvementBuildingToConstruct != null) {
+                    val improvement = constructionsTable.improvementBuildingToConstruct!!.getImprovement(city.getRuleset())!!
+                    if (tileInfo.canBuildImprovement(improvement, cityInfo.civInfo)) {
+                        tileInfo.improvementInProgress = improvement.name
+                        tileInfo.turnsToImprovement = -1
+                        constructionsTable.improvementBuildingToConstruct = null
+                        cityInfo.cityConstructions.addToQueue(improvement.name)
+                        update()
+                    } else {
+                        constructionsTable.improvementBuildingToConstruct = null
+                        update()
+                    }
+                    return@onClick
+                }
+
                 selectedTile = tileInfo
                 selectedConstruction = null
                 if (tileGroup.isWorkable && canChangeState) {
-                    if (!tileInfo.isWorked() && city.population.getFreePopulation() > 0) {
+                    if (!tileInfo.providesYield() && city.population.getFreePopulation() > 0) {
                         city.workedTiles.add(tileInfo.position)
                         game.settings.addCompletedTutorialTask("Reassign worked tiles")
                     } else if (tileInfo.isWorked() && !tileInfo.isLocked())
@@ -189,55 +208,53 @@ class CityScreen(internal val city: CityInfo): CameraStageBaseScreen() {
             }
 
             tileGroups.add(tileGroup)
-
-            val positionalVector = HexMath.hex2WorldCoords(tileInfo.position.cpy().sub(cityInfo.location))
-            val groupSize = 50
-            tileGroup.setPosition(stage.width / 2 + positionalVector.x * 0.8f * groupSize.toFloat(),
-                    stage.height / 2 + positionalVector.y * 0.8f * groupSize.toFloat())
         }
 
-        val tileMapGroup = TileGroupMap(tileGroups,stage.width/2)
+        val tilesToUnwrap = ArrayList<CityTileGroup>()
+        for (tileGroup in tileGroups) {
+            val xDifference = city.getCenterTile().position.x - tileGroup.tileInfo.position.x
+            val yDifference = city.getCenterTile().position.y - tileGroup.tileInfo.position.y
+            //if difference is bigger than 5 the tileGroup we are looking for is on the other side of the map
+            if (xDifference > 5 || xDifference < -5 || yDifference > 5 || yDifference < -5) {
+                //so we want to unwrap its position
+                tilesToUnwrap.add(tileGroup)
+            }
+        }
+
+        val tileMapGroup = TileGroupMap(tileGroups, stage.width / 2, stage.height / 2, tileGroupsToUnwrap = tilesToUnwrap)
         val scrollPane = ScrollPane(tileMapGroup)
-        scrollPane.setSize(stage.width,stage.height)
+        scrollPane.setSize(stage.width, stage.height)
         scrollPane.setOrigin(stage.width / 2, stage.height / 2)
         scrollPane.center(stage)
         stage.addActor(scrollPane)
 
         scrollPane.layout() // center scrolling
-        scrollPane.scrollPercentX=0.5f
-        scrollPane.scrollPercentY=0.5f
+        scrollPane.scrollPercentX = 0.5f
+        scrollPane.scrollPercentY = 0.5f
         scrollPane.updateVisualScroll()
     }
 
     fun exit() {
-        stage.removeListener(keyListener)
         game.setWorldScreen()
         game.worldScreen.mapHolder.setCenterPosition(city.location)
-        game.worldScreen.bottomUnitTable.selectedUnit=null
+        game.worldScreen.bottomUnitTable.selectUnit()
     }
+
     fun page(delta: Int) {
         val civInfo = city.civInfo
         val numCities = civInfo.cities.size
         if (numCities == 0) return
         val indexOfCity = civInfo.cities.indexOf(city)
         val indexOfNextCity = (indexOfCity + delta + numCities) % numCities
-        stage.removeListener(keyListener)
-        game.setScreen(CityScreen(civInfo.cities[indexOfNextCity]))
+        val newCityScreen = CityScreen(civInfo.cities[indexOfNextCity])
+        newCityScreen.showConstructionsTable = showConstructionsTable // stay on stats drilldown between cities
+        newCityScreen.update()
+        game.setScreen(newCityScreen)
     }
 
-    private fun getKeyboardListener(): InputListener = object : InputListener() {
-        override fun keyDown(event: InputEvent?, keyCode: Int): Boolean {
-            if (event == null) return super.keyDown(event, keyCode)
-            when(event.keyCode) {
-                Input.Keys.LEFT -> page(-1)
-                Input.Keys.RIGHT -> page(1)
-                else -> return super.keyDown(event, keyCode)
-            }
-            return true
+    override fun resize(width: Int, height: Int) {
+        if (stage.viewport.screenWidth != width || stage.viewport.screenHeight != height) {
+            game.setScreen(CityScreen(city))
         }
-    }
-
-    fun updateExitCityButton(){
-
     }
 }

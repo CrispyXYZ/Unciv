@@ -5,7 +5,6 @@ object Constants {
     const val workerUnique = "Can build improvements on tiles"
     const val settler = "Settler"
     const val settlerUnique = "Founds a new city"
-    const val greatGeneral = "Great General"
 
     const val impassable = "Impassable"
     const val ocean = "Ocean"
@@ -58,6 +57,8 @@ object Constants {
     const val unitActionSleepUntilHealed = "Sleep until healed"
     const val unitActionAutomation = "Automate"
     const val unitActionExplore = "Explore"
+    const val unitActionParadrop = "Paradrop"
+
     const val futureTech = "Future Tech"
 
     const val cancelImprovementOrder = "Cancel improvement order"
@@ -66,8 +67,6 @@ object Constants {
     const val close = "Close"
     const val disabled = "disabled"
     const val enabled = "enabled"
-
-    const val scienceConversionEffect = "Production to science conversion in cities increased by 33%"
 
     const val ancientEra = "Ancient era"
     const val classicalEra = "Classical era"
@@ -79,4 +78,5 @@ object Constants {
     const val futureEra = "Future era"
     const val barbarians = "Barbarians"
     const val spectator = "Spectator"
+    const val custom = "Custom"
 }

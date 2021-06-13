@@ -3,8 +3,6 @@ package com.unciv.models.ruleset
 import com.unciv.Constants
 import com.unciv.models.stats.INamed
 import com.unciv.models.translations.tr
-import java.util.*
-import kotlin.collections.ArrayList
 
 class Difficulty: INamed {
     override lateinit var name: String
@@ -25,8 +23,6 @@ class Difficulty: INamed {
     var aiBuildingMaintenanceModifier:Float = 1f
     var aiUnitMaintenanceModifier = 1f
     var aiFreeTechs = ArrayList<String>()
-    @Deprecated("Deprecated as of 3.10.4. Use aiMajorCivStartingUnits instead")
-    var aiFreeUnits = ArrayList<String>()
     var aiMajorCivStartingUnits = ArrayList<String>()
     var aiCityStateStartingUnits = ArrayList<String>()
     var aiUnhappinessModifier = 1f
@@ -39,7 +35,7 @@ class Difficulty: INamed {
             startingUnits.add(Constants.settler)
             startingUnits.add("Warrior")
             aiCityStateStartingUnits.addAll(startingUnits)
-            aiMajorCivStartingUnits.addAll(startingUnits + aiFreeUnits)
+            aiMajorCivStartingUnits.addAll(startingUnits)
         }
     }
 
