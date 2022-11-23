@@ -24,6 +24,7 @@ import com.unciv.ui.pickerscreens.PickerScreen
 import com.unciv.ui.popup.ConfirmPopup
 import com.unciv.ui.popup.Popup
 import com.unciv.ui.popup.ToastPopup
+import com.unciv.ui.saves.LoadGameScreen
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ExpanderTab
 import com.unciv.ui.utils.RecreateOnResize
@@ -35,6 +36,7 @@ import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.pad
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
+import com.unciv.ui.worldscreen.WorldScreen
 import com.unciv.utils.Log
 import com.unciv.utils.concurrency.Concurrency
 import com.unciv.utils.concurrency.launchOnGLThread
@@ -113,6 +115,16 @@ class NewGameScreen(
                         return@onClick
                     }
                 }
+
+                if (!gameSetupInfo.gameParameters.anyoneCanSpectate) {
+                    if (gameSetupInfo.gameParameters.players.none { it.playerId == UncivGame.Current.settings.multiplayer.userId }) {
+                        val notAllowedToSpectate = Popup(this)
+                        notAllowedToSpectate.addGoodSizedLabel("You are not allowed to spectate!".tr()).row()
+                        notAllowedToSpectate.addCloseButton()
+                        notAllowedToSpectate.open()
+                        return@onClick
+                    }
+                }
             }
 
             if (gameSetupInfo.gameParameters.players.none {
@@ -177,6 +189,7 @@ class NewGameScreen(
             rightSideButton.disable()
             rightSideButton.setText("Working...".tr())
 
+            setSkin()
             // Creating a new game can take a while and we don't want ANRs
             Concurrency.runOnNonDaemonThreadPool("NewGame") {
                 startNewGame()

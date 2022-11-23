@@ -2,7 +2,6 @@ package com.unciv.ui.newgamescreen
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.UncivGame
-import com.unciv.logic.civilization.CityStateType
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.translations.tr
@@ -70,6 +69,8 @@ class GameOptionsTable(
         checkboxTable.addOneCityChallengeCheckbox()
         checkboxTable.addNuclearWeaponsCheckbox()
         checkboxTable.addIsOnlineMultiplayerCheckbox()
+        if (gameParameters.isOnlineMultiplayer)
+            checkboxTable.addAnyoneCanSpectateCheckbox()
         if (UncivGame.Current.settings.enableEspionageOption)
             checkboxTable.addEnableEspionageCheckbox()
         checkboxTable.addNoStartBiasCheckbox()
@@ -92,8 +93,8 @@ class GameOptionsTable(
             { gameParameters.noBarbarians = it }
 
     private fun Table.addRagingBarbariansCheckbox() =
-        addCheckbox("Raging Barbarians", gameParameters.ragingBarbarians)
-        { gameParameters.ragingBarbarians = it }
+            addCheckbox("Raging Barbarians", gameParameters.ragingBarbarians)
+            { gameParameters.ragingBarbarians = it }
 
     private fun Table.addOneCityChallengeCheckbox() =
             addCheckbox("One City Challenge", gameParameters.oneCityChallenge)
@@ -111,6 +112,13 @@ class GameOptionsTable(
                 if (shouldUseMultiplayer) {
                     MultiplayerHelpers.showDropboxWarning(previousScreen as BaseScreen)
                 }
+                update()
+            }
+
+    private fun Table.addAnyoneCanSpectateCheckbox() =
+            addCheckbox("Allow anyone to spectate", gameParameters.anyoneCanSpectate)
+            {
+                gameParameters.anyoneCanSpectate = it
             }
 
     private fun Table.addEnableEspionageCheckbox() =

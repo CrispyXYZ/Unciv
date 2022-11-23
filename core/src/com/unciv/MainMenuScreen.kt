@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.logic.GameInfo
 import com.unciv.logic.GameStarter
+import com.unciv.logic.UncivShowableException
 import com.unciv.logic.map.MapParameters
 import com.unciv.logic.map.MapShape
 import com.unciv.logic.map.MapSizeNew
@@ -52,7 +53,9 @@ import kotlin.math.min
 
 
 class MainMenuScreen: BaseScreen(), RecreateOnResize {
-    private val backgroundTable = Table().apply { background= ImageGetter.getBackground(Color.WHITE) }
+    private val backgroundTable = Table().apply {
+        background = skinStrings.getUiBackground("MainMenuScreen/Background", tintColor = Color.WHITE)
+    }
     private val singleColumn = isCrampedPortrait()
     private var easterEggRuleset: Ruleset? = null  // Cache it so the next 'egg' can be found in Civilopedia
 
@@ -70,7 +73,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         function: () -> Unit
     ): Table {
         val table = Table().pad(15f, 30f, 15f, 30f)
-        table.background = ImageGetter.getRoundedEdgeRectangle(ImageGetter.getBlue())
+        table.background = skinStrings.getUiBackground(
+            "MainMenuScreen/MenuButton",
+            skinStrings.roundedEdgeRectangle,
+            skinStrings.skinConfig.baseColor
+        )
         table.add(ImageGetter.getImage(icon)).size(50f).padRight(30f)
         table.add(text.toLabel().setFontSize(30)).minWidth(200f)
 
@@ -117,7 +124,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
                         shape = MapShape.rectangular
                         mapSize = MapSizeNew(mapWidth.toInt() + 1, mapHeight.toInt() + 1)
                         type = MapType.default
-                        waterThreshold = -0.055f // Gives the same level as when waterThreshold was unused in MapType.default
+                        waterThreshold = -0.1f // mainly land, gets about 30% water
                         modifyForEasterEgg()
                     })
 
@@ -194,16 +201,16 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             game.popScreen()
         }
 
-        val helpButton = "?".toLabel(fontSize = 32)
+        val helpButton = "?".toLabel(fontSize = 48)
             .apply { setAlignment(Align.center) }
-            .surroundWithCircle(40f, color = ImageGetter.getBlue())
+            .surroundWithCircle(60f, color = skinStrings.skinConfig.baseColor)
             .apply { actor.y -= 2.5f } // compensate font baseline (empirical)
-            .surroundWithCircle(42f, resizeActor = false)
+            .surroundWithCircle(64f, resizeActor = false)
         helpButton.touchable = Touchable.enabled
         helpButton.onActivation { openCivilopedia() }
         helpButton.keyShortcuts.add(Input.Keys.F1)
-        helpButton.addTooltip(KeyCharAndCode(Input.Keys.F1), 20f)
-        helpButton.setPosition(20f, 20f)
+        helpButton.addTooltip(KeyCharAndCode(Input.Keys.F1), 30f)
+        helpButton.setPosition(30f, 30f)
         stage.addActor(helpButton)
     }
 
@@ -226,7 +233,17 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             val newGame: GameInfo
             // Can fail when starting the game...
             try {
-                newGame = GameStarter.startNewGame(GameSetupInfo.fromSettings("Chieftain"))
+                val gameInfo = GameSetupInfo.fromSettings("Chieftain")
+                if (gameInfo.gameParameters.victoryTypes.isEmpty()) {
+                    val ruleSet = RulesetCache.getComplexRuleset(gameInfo.gameParameters)
+                    gameInfo.gameParameters.victoryTypes.addAll(ruleSet.victories.keys)
+                }
+                newGame = GameStarter.startNewGame(gameInfo)
+
+            } catch (notAPlayer: UncivShowableException) {
+                val (message) = LoadGameScreen.getLoadExceptionMessage(notAPlayer)
+                launchOnGLThread { ToastPopup(message, this@MainMenuScreen) }
+                return@run
             } catch (ex: Exception) {
                 launchOnGLThread { ToastPopup(errorText, this@MainMenuScreen) }
                 return@run
@@ -238,6 +255,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             } catch (outOfMemory: OutOfMemoryError) {
                 launchOnGLThread {
                     ToastPopup("Not enough memory on phone to load game!", this@MainMenuScreen)
+                }
+            } catch (notAPlayer: UncivShowableException) {
+                val (message) = LoadGameScreen.getLoadExceptionMessage(notAPlayer)
+                launchOnGLThread {
+                    ToastPopup(message, this@MainMenuScreen)
                 }
             } catch (ex: Exception) {
                 launchOnGLThread {

@@ -3,7 +3,6 @@ package com.unciv.ui.pickerscreens
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
-import com.unciv.UncivGame
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.TutorialTrigger
 import com.unciv.models.UncivSound
@@ -11,13 +10,10 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.Promotion
 import com.unciv.models.translations.tr
 import com.unciv.ui.images.ImageGetter
-import com.unciv.ui.popup.AskTextPopup
 import com.unciv.ui.utils.BaseScreen
-import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.extensions.isEnabled
 import com.unciv.ui.utils.extensions.onClick
-import com.unciv.ui.utils.extensions.surroundWithCircle
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 
@@ -42,11 +38,13 @@ class PromotionPickerScreen(val unit: MapUnit) : PickerScreen(), RecreateOnResiz
         rightSideButton.onClick(UncivSound.Promote) {
             acceptPromotion(selectedPromotion)
         }
+
         val canBePromoted = unit.promotions.canBePromoted()
         val canChangeState = game.worldScreen!!.canChangeState
         val canPromoteNow = canBePromoted && canChangeState
                 && unit.currentMovement > 0 && unit.attacksThisTurn == 0
         rightSideButton.isEnabled = canPromoteNow
+        descriptionLabel.setText(updateDescriptionLabel())
 
         val availablePromotionsGroup = Table()
         availablePromotionsGroup.defaults().pad(5f)
@@ -57,25 +55,37 @@ class PromotionPickerScreen(val unit: MapUnit) : PickerScreen(), RecreateOnResiz
         }
         val unitAvailablePromotions = unit.promotions.getAvailablePromotions()
 
-        if (canPromoteNow && unit.instanceName == null) {
-            val renameButton = "Choose name for [${unit.name}]".toTextButton()
-            renameButton.isEnabled = true
-            renameButton.onClick {
-                AskTextPopup(
-                    this,
-                    label = "Choose name for [${unit.baseUnit.name}]",
-                    icon = ImageGetter.getUnitIcon(unit.name).surroundWithCircle(80f),
-                    defaultText = unit.name,
-                    validate = { it != unit.name},
-                    actionOnOk = { userInput ->
-                        unit.instanceName = userInput
-                        this.game.replaceCurrentScreen(PromotionPickerScreen(unit))
-                    }
-                ).open()
-            }
-            availablePromotionsGroup.add(renameButton)
-            availablePromotionsGroup.row()
+        //Always allow the user to rename the unit as many times as they like.
+        val renameButton = "Choose name for [${unit.name}]".toTextButton()
+        renameButton.isEnabled = true
+
+        renameButton.onClick {
+            if (!canChangeState) return@onClick
+            UnitRenamePopup(
+                screen = this,
+                unit = unit,
+                actionOnClose = {
+                    game.replaceCurrentScreen(PromotionPickerScreen(unit))
+                }
+            )
         }
+        availablePromotionsGroup.add(renameButton)
+        availablePromotionsGroup.row()
+
+
+        val promotionsTable = Table()
+        val width = promotionsForUnitType.maxOf { it.column } +1
+        val height = promotionsForUnitType.maxOf { it.row } +1
+        val cellMatrix = ArrayList<ArrayList<Table>>()
+        for (y in 0..height) {
+            cellMatrix.add(ArrayList())
+            for (x in 0..width*2) {
+                val cell = promotionsTable.add(Table())
+                cellMatrix[y].add(cell.actor)
+            }
+            promotionsTable.row()
+        }
+
         for (promotion in promotionsForUnitType) {
             if (promotion.hasUnique(UniqueType.OneTimeUnitHeal) && unit.health == 100) continue
             val isPromotionAvailable = promotion in unitAvailablePromotions
@@ -89,10 +99,12 @@ class PromotionPickerScreen(val unit: MapUnit) : PickerScreen(), RecreateOnResiz
                 rightSideButton.isEnabled = enable
                 rightSideButton.setText(promotion.name.tr())
 
-                descriptionLabel.setText(promotion.getDescription(promotionsForUnitType))
+                descriptionLabel.setText(updateDescriptionLabel(promotion.getDescription(promotionsForUnitType)))
             }
 
-            availablePromotionsGroup.add(selectPromotionButton)
+            val group = cellMatrix[promotion.row][promotion.column*2]
+            group.pad(5f)
+            group.add(selectPromotionButton)
 
             if (canPromoteNow && isPromotionAvailable) {
                 val pickNow = "Pick now!".toLabel()
@@ -100,14 +112,12 @@ class PromotionPickerScreen(val unit: MapUnit) : PickerScreen(), RecreateOnResiz
                 pickNow.onClick {
                     acceptPromotion(promotion)
                 }
-                availablePromotionsGroup.add(pickNow).padLeft(10f).fillY()
+                cellMatrix[promotion.row][promotion.column*2+1].add(pickNow).padLeft(10f).fillY()
             }
             else if (unitHasPromotion) selectPromotionButton.color = Color.GREEN
             else selectPromotionButton.color= Color.GRAY
-
-            availablePromotionsGroup.row()
-
         }
+        availablePromotionsGroup.add(promotionsTable)
         topTable.add(availablePromotionsGroup)
 
         displayTutorial(TutorialTrigger.Experience)
@@ -117,6 +127,20 @@ class PromotionPickerScreen(val unit: MapUnit) : PickerScreen(), RecreateOnResiz
         splitPane.pack()    // otherwise scrollPane.maxY == 0
         scrollPane.scrollY = scrollY
         scrollPane.updateVisualScroll()
+    }
+
+    private fun updateDescriptionLabel(): String {
+        var newDescriptionText = unit.displayName().tr()
+
+        return newDescriptionText.toString()
+    }
+
+    private fun updateDescriptionLabel(promotionDescription: String): String {
+        var newDescriptionText = unit.displayName().tr()
+
+        newDescriptionText += "\n" + promotionDescription
+
+        return newDescriptionText.toString()
     }
 
     override fun recreate(): BaseScreen {

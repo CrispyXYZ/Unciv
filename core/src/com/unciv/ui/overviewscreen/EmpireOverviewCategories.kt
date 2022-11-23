@@ -40,10 +40,10 @@ enum class EmpireOverviewCategories(
         fun (viewingPlayer: CivilizationInfo, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?)
                 = UnitOverviewTab(viewingPlayer, overviewScreen, persistedData),
         fun (viewingPlayer: CivilizationInfo) = viewingPlayer.getCivUnits().none().toState()),
-    Diplomacy("OtherIcons/DiplomacyW", 'D', Align.top,
+    Politics("OtherIcons/Politics", 'P', Align.top,
         fun (viewingPlayer: CivilizationInfo, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?)
-                = DiplomacyOverviewTab(viewingPlayer, overviewScreen, persistedData),
-        fun (viewingPlayer: CivilizationInfo) = viewingPlayer.diplomacy.isEmpty().toState()),
+                = GlobalPoliticsOverviewTable(viewingPlayer, overviewScreen, persistedData),
+        fun (_: CivilizationInfo) = EmpireOverviewTabState.Normal),
     Resources("StatIcons/Happiness", 'R', Align.topLeft,
         fun (viewingPlayer: CivilizationInfo, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?)
                 = ResourcesOverviewTab(viewingPlayer, overviewScreen, persistedData),
@@ -61,9 +61,11 @@ enum class EmpireOverviewCategories(
                 = WonderOverviewTab(viewingPlayer, overviewScreen),
         fun (viewingPlayer: CivilizationInfo) = (viewingPlayer.naturalWonders.isEmpty() && viewingPlayer.cities.isEmpty()).toState()),
     Notifications("OtherIcons/Notifications", 'N', Align.top,
-        fun (viewingPlayer: CivilizationInfo, overviewScreen: EmpireOverviewScreen, _: EmpireOverviewTabPersistableData?)
-                = NotificationsOverviewTable(worldScreen = UncivGame.Current.worldScreen!!, viewingPlayer, overviewScreen),
-        fun (_: CivilizationInfo) = EmpireOverviewTabState.Normal);
+        fun (viewingPlayer: CivilizationInfo, overviewScreen: EmpireOverviewScreen, persistedData: EmpireOverviewTabPersistableData?)
+                = NotificationsOverviewTable(worldScreen = UncivGame.Current.worldScreen!!, viewingPlayer, overviewScreen, persistedData),
+        fun (_: CivilizationInfo) = EmpireOverviewTabState.Normal)
+    
+    ; //must be here
 
     constructor(iconName: String, shortcutChar: Char, scrollAlign: Int, factory: FactoryType, stateTester: StateTesterType = { _ -> EmpireOverviewTabState.Normal })
         : this(iconName, KeyCharAndCode(shortcutChar), scrollAlign, factory, stateTester)

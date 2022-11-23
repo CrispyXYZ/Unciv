@@ -7,8 +7,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.SerializationException
 import com.unciv.Constants
-import com.unciv.logic.UncivFiles
 import com.unciv.logic.MissingModsException
+import com.unciv.logic.UncivFiles
 import com.unciv.logic.UncivShowableException
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.translations.tr
@@ -119,6 +119,12 @@ class LoadGameScreen(previousScreen:BaseScreen) : LoadOrSaveScreen() {
                 // This is what can lead to ANRs - reading the file and setting the transients, that's why this is in another thread
                 val loadedGame = game.files.loadGameByName(selectedSave)
                 game.loadGame(loadedGame)
+            } catch (notAPlayer: UncivShowableException) {
+                launchOnGLThread {
+                    val (message) = getLoadExceptionMessage(notAPlayer)
+                    loadingPopup.reuseWith(message, true)
+                    handleLoadGameException(notAPlayer)
+                }
             } catch (ex: Exception) {
                 launchOnGLThread {
                     loadingPopup.close()
@@ -234,7 +240,7 @@ class LoadGameScreen(previousScreen:BaseScreen) : LoadOrSaveScreen() {
                     val repo = repos.items.firstOrNull { it.name.lowercase() == modName }
                         ?: throw UncivShowableException("Could not find a mod named \"[$modName]\".")
                     val modFolder = Github.downloadAndExtract(
-                        repo.html_url, repo.default_branch,
+                        repo,
                         Gdx.files.local("mods")
                     )
                         ?: throw Exception() // downloadAndExtract returns null for 404 errors and the like -> display something!

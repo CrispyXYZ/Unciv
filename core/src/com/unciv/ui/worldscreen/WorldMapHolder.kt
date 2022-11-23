@@ -37,6 +37,7 @@ import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.tilegroups.TileSetStrings
 import com.unciv.ui.tilegroups.WorldTileGroup
+import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.UnitGroup
 import com.unciv.ui.utils.ZoomableScrollPane
@@ -169,6 +170,11 @@ class WorldMapHolder(
     }
 
     private fun onTileClicked(tileInfo: TileInfo) {
+
+        if (tileInfo.position !in worldScreen.viewingCiv.exploredTiles
+                && tileInfo.neighbors.all { it.position !in worldScreen.viewingCiv.exploredTiles })
+            return // This tile doesn't exist for you
+
         removeUnitActionOverlay()
         selectedTile = tileInfo
         unitMovementPaths.clear()
@@ -442,7 +448,7 @@ class WorldMapHolder(
 
         val numberCircle = dto.unitToTurnsToDestination.values.maxOrNull()!!.toString().toLabel(fontSize = 14)
             .apply { setAlignment(Align.center) }
-            .surroundWithCircle(smallerCircleSizes-2, color = ImageGetter.getBlue().darken(0.3f))
+            .surroundWithCircle(smallerCircleSizes-2, color = BaseScreen.skinStrings.skinConfig.baseColor.darken(0.3f))
             .surroundWithCircle(smallerCircleSizes,false)
 
         moveHereButton.addActor(numberCircle)
@@ -780,4 +786,8 @@ class WorldMapHolder(
     override fun draw(batch: Batch?, parentAlpha: Float) = super.draw(batch, parentAlpha)
 
     override fun act(delta: Float) = super.act(delta)
+
+    override fun clear() {
+        super.clear()
+    }
 }

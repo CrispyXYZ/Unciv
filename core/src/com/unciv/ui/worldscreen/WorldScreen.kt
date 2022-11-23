@@ -10,11 +10,13 @@ import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.actions.RepeatAction
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.MainMenuScreen
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
+import com.unciv.logic.UncivShowableException
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.ReligionState
 import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
@@ -29,7 +31,6 @@ import com.unciv.models.ruleset.tile.ResourceType
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.ui.cityscreen.CityScreen
 import com.unciv.ui.civilopedia.CivilopediaScreen
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.overviewscreen.EmpireOverviewScreen
 import com.unciv.ui.pickerscreens.DiplomaticVotePickerScreen
 import com.unciv.ui.pickerscreens.DiplomaticVoteResultScreen
@@ -124,8 +125,9 @@ class WorldScreen(
     private val notificationsScroll = NotificationsScroll(this)
     private val nextTurnButton = NextTurnButton()
     private val statusButtons = StatusButtons(nextTurnButton)
-    private val tutorialTaskTable = Table().apply { background = ImageGetter.getBackground(
-        ImageGetter.getBlue().darken(0.5f)) }
+    private val tutorialTaskTable = Table().apply {
+        background = skinStrings.getUiBackground("WorldScreen/TutorialTaskTable", tintColor = skinStrings.skinConfig.baseColor.darken(0.5f))
+    }
 
     private var nextTurnUpdateJob: Job? = null
 
@@ -264,17 +266,26 @@ class WorldScreen(
                             Input.Keys.UP, Input.Keys.DOWN, Input.Keys.LEFT, Input.Keys.RIGHT)
 
 
-                    override fun keyDown(event: InputEvent?, keycode: Int): Boolean {
-                        if (keycode !in ALLOWED_KEYS) return false
-                        // Without the following Ctrl-S would leave WASD map scrolling stuck
-                        // Might be obsolete with keyboard shortcut refactoring
-                        if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT)) return false
+                    override fun keyDown(event: InputEvent, keycode: Int): Boolean {
+                        if (event.target !is TextField) {
+                            if (keycode !in ALLOWED_KEYS) return false
+                            // Without the following Ctrl-S would leave WASD map scrolling stuck
+                            // Might be obsolete with keyboard shortcut refactoring
+                            if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(
+                                        Input.Keys.CONTROL_RIGHT
+                                    )
+                            ) return false
 
-                        pressedKeys.add(keycode)
-                        if (infiniteAction == null) {
-                            // create a copy of the action, because removeAction() will destroy this instance
-                            infiniteAction = Actions.forever(Actions.delay(0.01f, Actions.run { whileKeyPressedLoop() }))
-                            mapHolder.addAction(infiniteAction)
+                            pressedKeys.add(keycode)
+                            if (infiniteAction == null) {
+                                // create a copy of the action, because removeAction() will destroy this instance
+                                infiniteAction = Actions.forever(
+                                    Actions.delay(
+                                        0.01f,
+                                        Actions.run { whileKeyPressedLoop() })
+                                )
+                                mapHolder.addAction(infiniteAction)
+                            }
                         }
                         return true
                     }
@@ -416,7 +427,8 @@ class WorldScreen(
                     UncivGame.Current.pushScreen(DiplomaticVoteResultScreen(gameInfo.diplomaticVictoryVotesCast, viewingCiv))
                 !gameInfo.oneMoreTurnMode && (viewingCiv.isDefeated() || gameInfo.civilizations.any { it.victoryManager.hasWon() }) ->
                     game.pushScreen(VictoryScreen(this))
-                viewingCiv.greatPeople.freeGreatPeople > 0 -> game.pushScreen(GreatPersonPickerScreen(viewingCiv))
+                viewingCiv.greatPeople.freeGreatPeople > 0 ->
+                    game.pushScreen(GreatPersonPickerScreen(viewingCiv))
                 viewingCiv.popupAlerts.any() -> AlertPopup(this, viewingCiv.popupAlerts.first()).open()
                 viewingCiv.tradeRequests.isNotEmpty() -> {
                     // In the meantime this became invalid, perhaps because we accepted previous trades
@@ -660,10 +672,16 @@ class WorldScreen(
             viewingCiv.shouldGoToDueUnit() ->
                 NextTurnAction("Next unit", Color.LIGHT_GRAY) { switchToNextUnit() }
 
-            viewingCiv.cities.any { it.cityConstructions.currentConstructionFromQueue == "" } ->
+            viewingCiv.cities.any {
+                !it.isPuppet &&
+                it.cityConstructions.currentConstructionFromQueue == ""
+            } ->
                 NextTurnAction("Pick construction", Color.CORAL) {
                     val cityWithNoProductionSet = viewingCiv.cities
-                        .firstOrNull { it.cityConstructions.currentConstructionFromQueue == "" }
+                        .firstOrNull {
+                            !it.isPuppet &&
+                            it.cityConstructions.currentConstructionFromQueue == ""
+                        }
                     if (cityWithNoProductionSet != null) game.pushScreen(
                         CityScreen(cityWithNoProductionSet)
                     )
@@ -774,8 +792,12 @@ class WorldScreen(
         if (shouldUpdate) {
             shouldUpdate = false
 
+            // Since updating the worldscreen can take a long time, *especially* the first time, we disable input processing to avoid ANRs
+            Gdx.input.inputProcessor = null
             update()
             showTutorialsOnNextTurn()
+            if (Gdx.input.inputProcessor == null) // Update may have replaced the worldscreen with a GreatPersonPickerScreen etc, so the input would already be set
+                Gdx.input.inputProcessor = stage
         }
 //        topBar.selectedCivLabel.setText(Gdx.graphics.framesPerSecond) // for framerate testing
 
@@ -845,6 +867,13 @@ private fun startNewScreenJob(gameInfo: GameInfo, autosaveDisabled:Boolean = fal
     Concurrency.run {
         val newWorldScreen = try {
             UncivGame.Current.loadGame(gameInfo)
+        } catch (notAPlayer: UncivShowableException) {
+            withGLContext {
+                val (message) = LoadGameScreen.getLoadExceptionMessage(notAPlayer)
+                val mainMenu = UncivGame.Current.goToMainMenu()
+                ToastPopup(message, mainMenu)
+            }
+            return@run
         } catch (oom: OutOfMemoryError) {
             withGLContext {
                 val mainMenu = UncivGame.Current.goToMainMenu()

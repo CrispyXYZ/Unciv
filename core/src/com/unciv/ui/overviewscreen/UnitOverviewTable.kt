@@ -13,6 +13,8 @@ import com.unciv.ui.audio.SoundPlayer
 import com.unciv.ui.images.IconTextButton
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.pickerscreens.PromotionPickerScreen
+import com.unciv.ui.pickerscreens.UnitRenamePopup
+import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ExpanderTab
 import com.unciv.ui.utils.Fonts
 import com.unciv.ui.utils.TabbedPager
@@ -22,6 +24,7 @@ import com.unciv.ui.utils.extensions.brighten
 import com.unciv.ui.utils.extensions.center
 import com.unciv.ui.utils.extensions.darken
 import com.unciv.ui.utils.extensions.onClick
+import com.unciv.ui.utils.extensions.surroundWithCircle
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.worldscreen.unit.UnitActions
 import kotlin.math.abs
@@ -108,7 +111,10 @@ class UnitOverviewTab(
             }
         ) {
             it.defaults().pad(5f).fill(false)
-            it.background = ImageGetter.getBackground(ImageGetter.getBlue().darken(0.6f))
+            it.background = BaseScreen.skinStrings.getUiBackground(
+                "OverviewScreen/UnitOverviewTab/UnitSupplyTable",
+                tintColor = BaseScreen.skinStrings.skinConfig.baseColor.darken(0.6f)
+            )
             it.addLabeledValue("Base Supply", stats.getBaseUnitSupply())
             it.addLabeledValue("Cities", stats.getUnitSupplyFromCities())
             it.addLabeledValue("Population", stats.getUnitSupplyFromPop())
@@ -131,6 +137,7 @@ class UnitOverviewTab(
     private fun Table.updateUnitHeaderTable(): Table {
         defaults().pad(5f)
         add("Name".toLabel())
+        add()
         add("Action".toLabel())
         add(Fonts.strength.toString().toLabel())
         add(Fonts.rangedStrength.toString().toLabel())
@@ -167,6 +174,15 @@ class UnitOverviewTab(
             add(button).fillX()
 
             // Columns: action, strength, ranged, moves
+            val editIcon = ImageGetter.getImage("OtherIcons/Pencil").apply { this.color = Color.WHITE }.surroundWithCircle(30f, true, Color.valueOf("000c31"))
+            editIcon.onClick {
+                UnitRenamePopup(
+                    screen = overviewScreen,
+                    unit = unit,
+                    actionOnClose = {
+                        overviewScreen.game.replaceCurrentScreen(EmpireOverviewScreen(viewingPlayer, "", "")) })
+            }
+            add(editIcon)
             if (unit.action == null) add() else add(unit.getActionLabel().toLabel())
             if (baseUnit.strength > 0) add(baseUnit.strength.toLabel()) else add()
             if (baseUnit.rangedStrength > 0) add(baseUnit.rangedStrength.toLabel()) else add()

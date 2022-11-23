@@ -1,4 +1,4 @@
-# Unciv - FOSS Civ V for Android+Desktop
+# Unciv - FOSS Civ V for Android + Desktop
 
 ![](/extraImages/GithubPreviewImage.png)
 
@@ -28,10 +28,10 @@ If you want a small, fast, moddable, FOSS, in-depth 4X that can still run on a p
 In this order:
 
 * Polish! As you may have noticed, Unciv is fully functional but rough around the edges. This means:
-    * UI+UX improvements (suggestions welcome!)
+    * UI+UX improvements ([suggestions welcome!](https://github.com/yairm210/Unciv/issues/new?assignees=&labels=feature&template=feature_request.md&title=Feature+request%3A+))
     * Better automation, AI etc. in-game
-* Finishing off Vanilla mechanics - Time Victory, Air sweep action - mostly done!
-* G&K mechanics - espionage, the Maya's, etc.
+* Finishing off Vanilla mechanics - mostly done!
+* G&K mechanics - espionage, small other changes (see [#4697](https://www.github.com/yairm210/Unciv/issues/4697))
 * BNW mechanics - trade routes, world congress, etc.
 
 ## Contributing
@@ -79,8 +79,7 @@ Yes! Windows and Linux versions are available at [itch.io](https://yairm210.itch
 
 Unciv can also be installed on macOS, a guide on how to do that can be found [here](https://yairm210.github.io/Unciv/Other/Installing-on-macOS/).
 
-If you have Java 8, and are familiar with the command line, there are (considerably smaller) JARs in [Releases](https://github.com/yairm210/UnCiv/releases) which you can run with `java -jar Unciv.jar`.
-For Mac users, you'll need to add extra parameters, `java -XstartOnFirstThread -Djava.awt.headless=true -jar Unciv.jar`.
+If you have Java 8, and are familiar with the command line, there are (considerably smaller) JARs in [Releases](https://github.com/yairm210/Unciv/releases) which you can run with `java -jar Unciv.jar`.
 
 If you use Flatpaks, there's a Flatpak by [MayeulC](https://github.com/MayeulC) and you can know more about it [here](https://github.com/flathub/io.github.yairm210.unciv). Flathub link is available in the [Downloads](#downloads) section.
 

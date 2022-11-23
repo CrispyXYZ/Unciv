@@ -5,15 +5,18 @@ import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.Screen
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.utils.Align
 import com.unciv.logic.GameInfo
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.UncivFiles
+import com.unciv.logic.UncivShowableException
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.multiplayer.OnlineMultiplayer
 import com.unciv.models.metadata.GameSettings
 import com.unciv.models.ruleset.RulesetCache
+import com.unciv.models.skins.SkinCache
 import com.unciv.models.tilesets.TileSetCache
 import com.unciv.models.translations.Translations
 import com.unciv.ui.LanguagePickerScreen
@@ -126,10 +129,8 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
         ImageGetter.resetAtlases()
         ImageGetter.setNewRuleset(ImageGetter.ruleset)  // This needs to come after the settings, since we may have default visual mods
         if (settings.tileSet !in ImageGetter.getAvailableTilesets()) { // If one of the tilesets is no longer available, default back
-            settings.tileSet = "FantasyHex"
+            settings.tileSet = Constants.defaultTileset
         }
-
-        BaseScreen.setSkin() // needs to come AFTER the Texture reset, since the buttons depend on it
 
         Gdx.graphics.isContinuousRendering = settings.continuousRendering
 
@@ -138,6 +139,9 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
             translations.tryReadTranslationForCurrentLanguage()
             translations.loadPercentageCompleteOfLanguages()
             TileSetCache.loadTileSetConfigs()
+            SkinCache.loadSkinConfigs()
+
+            val vanillaRuleset = RulesetCache.getVanillaRuleset()
 
             if (settings.multiplayer.userId.isEmpty()) { // assign permanent user id
                 settings.multiplayer.userId = UUID.randomUUID().toString()
@@ -150,10 +154,12 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
 
             // This stuff needs to run on the main thread because it needs the GL context
             launchOnGLThread {
+                BaseScreen.setSkin() // needs to come AFTER the Texture reset, since the buttons depend on it and after loadSkinConfigs to be able to use the SkinConfig
+
                 musicController.chooseTrack(suffixes = listOf(MusicMood.Menu, MusicMood.Ambient),
                     flags = EnumSet.of(MusicTrackChooserFlags.SuffixMustMatch))
 
-                ImageGetter.ruleset = RulesetCache.getVanillaRuleset() // so that we can enter the map editor without having to load a game first
+                ImageGetter.ruleset = vanillaRuleset // so that we can enter the map editor without having to load a game first
 
                 when {
                     settings.isFreshlyCreated -> setAsRootScreen(LanguagePickerScreen())
@@ -179,15 +185,25 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
         val prevGameInfo = gameInfo
         gameInfo = newGameInfo
 
+
+        if (gameInfo?.gameParameters?.isOnlineMultiplayer == true
+                && gameInfo?.gameParameters?.anyoneCanSpectate == false
+                && gameInfo!!.civilizations.none { it.playerId == settings.multiplayer.userId }) {
+            throw UncivShowableException("You are not allowed to spectate!")
+        }
+
         initializeResources(prevGameInfo, newGameInfo)
 
         val isLoadingSameGame = worldScreen != null && prevGameInfo != null && prevGameInfo.gameId == newGameInfo.gameId
         val worldScreenRestoreState = if (isLoadingSameGame) worldScreen!!.getRestoreState() else null
 
+        lateinit var loadingScreen:LoadingScreen
+
         withGLContext {
             // this is not merged with the below GL context block so that our loading screen gets a chance to show - otherwise
             // we do it all in one swoop on the same thread and the application just "freezes" without loading screen for the duration.
-            setScreen(LoadingScreen(getScreen()))
+            loadingScreen = LoadingScreen(getScreen())
+            setScreen(loadingScreen)
         }
 
         return@toplevel withGLContext {
@@ -208,6 +224,7 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
 
             screenStack.addLast(screenToShow)
             setScreen(screenToShow)
+            loadingScreen.dispose()
 
             return@withGLContext newWorldScreen
         }
@@ -215,16 +232,12 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
 
     /** The new game info may have different mods or rulesets, which may use different resources that need to be loaded. */
     private suspend fun initializeResources(prevGameInfo: GameInfo?, newGameInfo: GameInfo) {
-        if (prevGameInfo == null || prevGameInfo.ruleSet != newGameInfo.ruleSet) {
+        if (prevGameInfo == null
+                || prevGameInfo.gameParameters.baseRuleset != newGameInfo.gameParameters.baseRuleset
+                || prevGameInfo.gameParameters.mods != newGameInfo.gameParameters.mods) {
             withGLContext {
                 ImageGetter.setNewRuleset(newGameInfo.ruleSet)
             }
-        }
-
-        if (prevGameInfo == null ||
-                prevGameInfo.gameParameters.baseRuleset != newGameInfo.gameParameters.baseRuleset ||
-                prevGameInfo.gameParameters.mods != newGameInfo.gameParameters.mods
-        ) {
             val fullModList = newGameInfo.gameParameters.getModsAndBaseRuleset()
             musicController.setModList(fullModList)
         }
@@ -292,16 +305,14 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
                 question = "Do you want to exit the game?",
                 confirmText = "Exit",
                 restoreDefault = { musicController.resume() },
-                action = {
-                    Gdx.app.exit()
-
-                }
+                action = { Gdx.app.exit() }
             ).open(force = true)
             return null
         }
         val oldScreen = screenStack.removeLast()
         val newScreen = screenStack.last()
         setScreen(newScreen)
+        newScreen.resume()
         oldScreen.dispose()
         return newScreen
     }
@@ -318,9 +329,15 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
     fun resetToWorldScreen(): WorldScreen {
         for (screen in screenStack.filter { it !is WorldScreen}) screen.dispose()
         screenStack.removeAll { it !is WorldScreen }
-        val worldScreen = screenStack.last()
+        val worldScreen= screenStack.last() as WorldScreen
+
+        // Re-initialize translations, images etc. that may have been 'lost' when we were playing around in NewGameScreen
+        val ruleset = worldScreen.gameInfo.ruleSet
+        translations.translationActiveMods = ruleset.mods
+        ImageGetter.setNewRuleset(ruleset)
+
         setScreen(worldScreen)
-        return worldScreen as WorldScreen
+        return worldScreen
     }
 
     private fun tryLoadDeepLinkedGame() = Concurrency.run("LoadDeepLinkedGame") {
@@ -364,7 +381,7 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
     override fun pause() {
         val curGameInfo = gameInfo
         if (curGameInfo != null) files.requestAutoSave(curGameInfo)
-        musicController.pause()
+        if (::musicController.isInitialized) musicController.pause()
         super.pause()
     }
 
@@ -453,7 +470,7 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
 
     companion object {
         //region AUTOMATICALLY GENERATED VERSION DATA - DO NOT CHANGE THIS REGION, INCLUDING THIS COMMENT
-        val VERSION = Version("4.2.4", 747)
+        val VERSION = Version("4.3.2", 767)
         //endregion
 
         lateinit var Current: UncivGame
@@ -473,12 +490,11 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
 
 private class GameStartScreen : BaseScreen() {
     init {
-        val happinessImage = ImageGetter.getExternalImage("LoadScreen.png")
-        happinessImage.center(stage)
-        happinessImage.setOrigin(Align.center)
-        happinessImage.addAction(Actions.sequence(
-                Actions.delay(1f),
-                Actions.rotateBy(360f, 0.5f)))
-        stage.addActor(happinessImage)
+        val logoImage = ImageGetter.getExternalImage("banner.png")
+        logoImage.center(stage)
+        logoImage.setOrigin(Align.center)
+        logoImage.color = Color.WHITE.cpy().apply { a = 0f }
+        logoImage.addAction(Actions.alpha(1f, 0.3f))
+        stage.addActor(logoImage)
     }
 }

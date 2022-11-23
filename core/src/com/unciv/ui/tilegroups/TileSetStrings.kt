@@ -13,11 +13,12 @@ import com.unciv.ui.images.ImageGetter
  * @param tileSet Name of the tileset. Defaults to active at time of instantiation.
  * @param fallbackDepth Maximum number of fallback tilesets to try. Used to prevent infinite recursion.
  * */
-class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallbackDepth: Int = 1) {
+class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, unitSet: String? = UncivGame.Current.settings.unitSet, fallbackDepth: Int = 1) {
 
     // this is so that when we have 100s of TileGroups, they won't all individually come up with all these strings themselves,
     // it gets pretty memory-intensive (10s of MBs which is a lot for lower-end phones)
     val tileSetLocation = "TileSets/$tileSet/"
+    val unitSetLocation = "TileSets/$unitSet/"
     val tileSetConfig = TileSetCache[tileSet] ?: TileSetConfig()
 
     // These need to be by lazy since the orFallback expects a tileset, which it may not get.
@@ -26,17 +27,17 @@ class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallb
     val crosshatchHexagon by lazy { orFallback { tileSetLocation + "CrosshatchHexagon" } }
     val crosshair by lazy { orFallback { getString(tileSetLocation, "Crosshair") } }
     val highlight by lazy { orFallback { getString(tileSetLocation, "Highlight") } }
-    val cityOverlay = tileSetLocation + "CityOverlay"
     val roadsMap = RoadStatus.values()
         .filterNot { it == RoadStatus.None }
         .associateWith { tileSetLocation + it.name }
-    val naturalWonderOverlay = tileSetLocation + "NaturalWonderOverlay"
+    val naturalWonder = tileSetLocation + "Tiles/NaturalWonder"
 
     val tilesLocation = tileSetLocation + "Tiles/"
     val bottomRightRiver by lazy { orFallback { tilesLocation + "River-BottomRight"} }
     val bottomRiver by lazy { orFallback { tilesLocation + "River-Bottom"} }
     val bottomLeftRiver  by lazy { orFallback { tilesLocation + "River-BottomLeft"} }
-    val unitsLocation = tileSetLocation + "Units/"
+
+    val unitsLocation = unitSetLocation + "Units/"
 
     val bordersLocation = tileSetLocation + "Borders/"
 
@@ -64,13 +65,8 @@ class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallb
         return currentString
     }
 
-    val overlay = "Overlay"
-    val city = "City"
     val tag = "-"
     fun getTile(baseTerrain: String) = getString(tilesLocation, baseTerrain)
-    fun getBaseTerrainOverlay(baseTerrain: String) = getString(tileSetLocation, baseTerrain, overlay)
-    fun getTerrainFeatureOverlay(terrainFeature: String) = getString(tileSetLocation, terrainFeature, overlay)
-
 
     fun getBorder(borderShapeString: String, innerOrOuter:String) = getString(bordersLocation, borderShapeString, innerOrOuter)
 
@@ -79,7 +75,7 @@ class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallb
         if (fallbackDepth <= 0 || tileSetConfig.fallbackTileSet == null)
             null
         else
-            TileSetStrings(tileSetConfig.fallbackTileSet!!, fallbackDepth-1)
+            TileSetStrings(tileSetConfig.fallbackTileSet!!, tileSetConfig.fallbackTileSet!!, fallbackDepth-1)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
@@ -106,6 +102,11 @@ class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallb
     val imageParamsToImageLocation = HashMap<String,String>()
 
 
+    val embarkedMilitaryUnitLocation = getString(unitsLocation, "EmbarkedUnit-Military")
+    val hasEmbarkedMilitaryUnitImage = ImageGetter.imageExists(embarkedMilitaryUnitLocation)
+
+    val embarkedCivilianUnitLocation = getString(unitsLocation, "EmbarkedUnit-Civilian")
+    val hasEmbarkedCivilianUnitImage = ImageGetter.imageExists(embarkedCivilianUnitLocation)
     /**
      * Image fallbacks work by precedence.
      * So currently, if you're france, it's the modern era, and you have a pikeman:
@@ -117,7 +118,20 @@ class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallb
      */
 
     private fun tryGetUnitImageLocation(unit:MapUnit): String? {
-        val baseUnitIconLocation = this.unitsLocation + unit.name
+
+        var baseUnitIconLocation = getString(this.unitsLocation, unit.name)
+        if (unit.isEmbarked()) {
+            val unitSpecificEmbarkedUnitLocation =
+                    getString(unitsLocation, "EmbarkedUnit-${unit.name}")
+            baseUnitIconLocation = if (ImageGetter.imageExists(unitSpecificEmbarkedUnitLocation))
+                unitSpecificEmbarkedUnitLocation
+            else if (unit.isCivilian() && hasEmbarkedCivilianUnitImage)
+                embarkedCivilianUnitLocation
+            else if (unit.isMilitary() && hasEmbarkedMilitaryUnitImage)
+                embarkedMilitaryUnitLocation
+            else baseUnitIconLocation // no change
+        }
+
         val civInfo = unit.civInfo
         val style = civInfo.nation.getStyleOrCivName()
 
@@ -128,7 +142,7 @@ class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallb
             // Era-only image: looks like "pikeman-Medieval era"
             .tryEraImage(civInfo, baseUnitIconLocation, null, this)
             // Style era: looks like "pikeman-France" or "pikeman-European"
-            .tryImage { "$baseUnitIconLocation-${civInfo.nation.getStyleOrCivName()}" }
+            .tryImage { getString(baseUnitIconLocation, tag, civInfo.nation.getStyleOrCivName()) }
             .tryImage { baseUnitIconLocation }
 
         if (unit.baseUnit.replaces != null)
@@ -141,7 +155,8 @@ class TileSetStrings(tileSet: String = UncivGame.Current.settings.tileSet, fallb
         val imageKey = getString(
             unit.name, tag,
             unit.civInfo.getEra().name, tag,
-            unit.civInfo.nation.getStyleOrCivName()
+            unit.civInfo.nation.getStyleOrCivName(), tag,
+            unit.isEmbarked().toString()
         )
         // if in cache return that
         val currentImageMapping = imageParamsToImageLocation[imageKey]

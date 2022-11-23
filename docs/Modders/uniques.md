@@ -49,11 +49,6 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 ??? example  "Triggers voting for the Diplomatic Victory"
 	Applicable to: Triggerable
 
-??? example  "Triggers the following global alert: [comment]"
-	Example: "Triggers the following global alert: [comment]"
-
-	Applicable to: Triggerable
-
 ??? example  "This Unit gains the [promotion] promotion"
 	Example: "This Unit gains the [Shock I] promotion"
 
@@ -75,7 +70,7 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 	Applicable to: Triggerable
 
 ??? example  "Will not be displayed in Civilopedia"
-	Applicable to: Triggerable, Global, Nation, Era, Speed, Tech, Policy, FounderBelief, FollowerBelief, Building, Wonder, Unit, UnitType, Promotion, Terrain, Improvement, Resource, Ruins, Tutorial, CityState, ModOptions, Conditional
+	Applicable to: Triggerable, Global, Nation, Era, Tech, Policy, FounderBelief, FollowerBelief, Building, Wonder, Unit, UnitType, Promotion, Terrain, Improvement, Resource, Ruins, Speed, Tutorial, CityState, ModOptions, Conditional
 
 ## Global uniques
 ??? example  "[stats]"
@@ -445,7 +440,9 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 ??? example  "Enables construction of Spaceship parts"
 	Applicable to: Global
 
-??? example  "Enemy land units must spend 1 extra movement point when inside your territory (obsolete upon Dynamite)"
+??? example  "Enemy [mapUnitFilter] units must spend [amount] extra movement points when inside your territory"
+	Example: "Enemy [Wounded] units must spend [3] extra movement points when inside your territory"
+
 	Applicable to: Global
 
 ??? example  "Production to [civWideStat] conversion in cities changed by [relativeAmount]%"
@@ -810,15 +807,24 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 ??? example  "Starting in this era disables religion"
 	Applicable to: Era
 
+??? example  "Every major Civilization gains a spy once a civilization enters this era"
+	Applicable to: Era
+
 ## Tech uniques
 ??? example  "Starting tech"
 	Applicable to: Tech
 
 ??? example  "Only available"
-	Applicable to: Tech, Policy, Building, Unit, Promotion, Improvement
+	Applicable to: Tech, Policy, Building, Unit, Promotion, Improvement, Ruins
 
 ??? example  "Cannot be hurried"
 	Applicable to: Tech, Building
+
+## Policy uniques
+??? example  "Triggers the following global alert: [comment]"
+	Example: "Triggers the following global alert: [comment]"
+
+	Applicable to: Policy
 
 ## FounderBelief uniques
 ??? example  "[stats] for each global city following this religion"
@@ -1179,6 +1185,9 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 	Applicable to: Unit
 
 ??? example  "Destroys tile improvements when attacking"
+	Applicable to: Unit
+
+??? example  "Cannot move"
 	Applicable to: Unit
 
 ??? example  "Double movement in [terrainFilter]"
@@ -1610,17 +1619,6 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 ??? example  "This Unit upgrades for free including special upgrades"
 	Applicable to: Ruins
 
-??? example  "Only available after [amount] turns"
-	Example: "Only available after [3] turns"
-
-	Applicable to: Ruins
-
-??? example  "Hidden before founding a Pantheon"
-	Applicable to: Ruins
-
-??? example  "Hidden after founding a Pantheon"
-	Applicable to: Ruins
-
 ??? example  "Hidden after generating a Great Prophet"
 	Applicable to: Ruins
 
@@ -1662,6 +1660,16 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 
 	Applicable to: Conditional
 
+??? example  "&lt;before [amount] turns&gt;"
+	Example: "&lt;before [3] turns&gt;"
+
+	Applicable to: Conditional
+
+??? example  "&lt;after [amount] turns&gt;"
+	Example: "&lt;after [3] turns&gt;"
+
+	Applicable to: Conditional
+
 ??? example  "&lt;when at war&gt;"
 	Applicable to: Conditional
 
@@ -1669,6 +1677,9 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 	Applicable to: Conditional
 
 ??? example  "&lt;during a Golden Age&gt;"
+	Applicable to: Conditional
+
+??? example  "&lt;during We Love The King Day&gt;"
 	Applicable to: Conditional
 
 ??? example  "&lt;while the empire is happy&gt;"
@@ -1725,6 +1736,12 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 ??? example  "&lt;before adopting [policy]&gt;"
 	Example: "&lt;before adopting [Oligarchy]&gt;"
 
+	Applicable to: Conditional
+
+??? example  "&lt;before founding a Pantheon&gt;"
+	Applicable to: Conditional
+
+??? example  "&lt;after founding a Pantheon&gt;"
 	Applicable to: Conditional
 
 ??? example  "&lt;if [buildingName] is constructed&gt;"

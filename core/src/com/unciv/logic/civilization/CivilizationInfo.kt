@@ -22,6 +22,7 @@ import com.unciv.logic.trade.TradeEvaluation
 import com.unciv.logic.trade.TradeRequest
 import com.unciv.models.Counter
 import com.unciv.models.ruleset.Building
+import com.unciv.models.ruleset.CityStateType
 import com.unciv.models.ruleset.Difficulty
 import com.unciv.models.ruleset.Era
 import com.unciv.models.ruleset.ModOptionsConstants
@@ -33,6 +34,7 @@ import com.unciv.models.ruleset.tile.ResourceType
 import com.unciv.models.ruleset.tile.TileResource
 import com.unciv.models.ruleset.unique.StateForConditionals
 import com.unciv.models.ruleset.unique.TemporaryUnique
+import com.unciv.models.ruleset.unique.Unique
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.stats.Stat
@@ -105,7 +107,11 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
 
     /** This is for performance since every movement calculation depends on this, see MapUnit comment */
     @Transient
-    var hasActiveGreatWall = false
+    var hasActiveEnemyMovementPenalty = false
+
+    /** Same as above variable */
+    @Transient
+    var enemyMovementPenaltyUniques: Sequence<Unique>? = null
 
     @Transient
     var statsForNextTurn = Stats()
@@ -155,6 +161,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
     var religionManager = ReligionManager()
     var goldenAges = GoldenAgeManager()
     var greatPeople = GreatPersonManager()
+    var espionageManager = EspionageManager()
     var victoryManager = VictoryManager()
     var ruinsManager = RuinsManager()
     var diplomacy = HashMap<String, DiplomacyManager>()
@@ -188,10 +195,6 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
     var cities = listOf<CityInfo>()
     var citiesCreated = 0
     var exploredTiles = HashSet<Vector2>()
-
-    @Deprecated("Only for backward compatibility, will have no values after GameInfo.setTransients",
-        ReplaceWith("lastSeenImprovement"))
-    var lastSeenImprovementSaved = HashMap<String, String>()
 
     var lastSeenImprovement = HashMapVector2<String>()
 
@@ -261,6 +264,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         toReturn.goldenAges = goldenAges.clone()
         toReturn.greatPeople = greatPeople.clone()
         toReturn.ruinsManager = ruinsManager.clone()
+        toReturn.espionageManager = espionageManager.clone()
         toReturn.victoryManager = victoryManager.clone()
         toReturn.allyCivName = allyCivName
         for (diplomacyManager in diplomacy.values.map { it.clone() })
@@ -339,16 +343,13 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
     fun isBarbarian() = nation.isBarbarian()
     fun isSpectator() = nation.isSpectator()
     fun isCityState(): Boolean = nation.isCityState()
-    val cityStateType: CityStateType get() = nation.cityStateType!!
+    @delegate:Transient
+    val cityStateType: CityStateType by lazy { gameInfo.ruleSet.cityStateTypes[nation.cityStateType!!]!! }
     var cityStatePersonality: CityStatePersonality = CityStatePersonality.Neutral
     var cityStateResource: String? = null
     var cityStateUniqueUnit: String? = null // Unique unit for militaristic city state. Might still be null if there are no appropriate units
     fun isMajorCiv() = nation.isMajorCiv()
     fun isAlive(): Boolean = !isDefeated()
-
-    @Suppress("unused")  //TODO remove if future use unlikely, including DiplomacyFlags.EverBeenFriends and 2 DiplomacyManager methods - see #3183
-    // I'm willing to call this deprecated after so long
-    fun hasEverBeenFriendWith(otherCiv: CivilizationInfo): Boolean = getDiplomacyManager(otherCiv).everBeenFriends()
 
     fun hasMetCivTerritory(otherCiv: CivilizationInfo): Boolean = otherCiv.getCivTerritory().any { it in exploredTiles }
     fun getCompletedPolicyBranchesCount(): Int = policies.adoptedPolicies.count { Policy.isBranchCompleteByName(it) }
@@ -456,6 +457,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
                 .filter { it.isOfType(uniqueType) && it.conditionalsApply(stateForConditionals) }
             )
         yieldAll(getEra().getMatchingUniques(uniqueType, stateForConditionals))
+        yieldAll(cityStateFunctions.getUniquesProvidedByCityStates(uniqueType, stateForConditionals))
         if (religionManager.religion != null)
             yieldAll(religionManager.religion!!.getFounderUniques()
                 .filter { it.isOfType(uniqueType) && it.conditionalsApply(stateForConditionals) })
@@ -671,6 +673,18 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         return diplomacyManager.hasOpenBorders
     }
 
+    fun getEnemyMovementPenalty(enemyUnit: MapUnit): Float {
+        if (enemyMovementPenaltyUniques != null && enemyMovementPenaltyUniques!!.any()) {
+            return enemyMovementPenaltyUniques!!.sumOf {
+                if (it.type!! == UniqueType.EnemyLandUnitsSpendExtraMovement
+                        && enemyUnit.matchesFilter(it.params[0]))
+                    it.params[1].toInt()
+                else 0
+            }.toFloat()
+        }
+        return 0f // should not reach this point
+    }
+
     /**
      * Returns a civilization caption suitable for greetings including player type info:
      * Like "Milan" if the nation is a city state, "Caesar of Rome" otherwise, with an added
@@ -833,9 +847,9 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
             diplomacyManager.updateHasOpenBorders()
         }
 
-        victoryManager.civInfo = this
+        espionageManager.setTransients(this)
 
-        thingsToFocusOnForVictory = getPreferredVictoryTypeObject()?.getThingsToFocus(this) ?: setOf()
+        victoryManager.civInfo = this
 
         for (cityInfo in cities) {
             cityInfo.civInfo = this // must be before the city's setTransients because it depends on the tilemap, that comes from the currentPlayerCivInfo
@@ -867,7 +881,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
 
     fun updateSightAndResources() {
         updateViewableTiles()
-        updateHasActiveGreatWall()
+        updateHasActiveEnemyMovementPenalty()
         updateDetailedCivResources()
     }
 
@@ -877,7 +891,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
 
     // implementation in a separate class, to not clog up CivInfo
     fun initialSetCitiesConnectedToCapitalTransients() = transients().updateCitiesConnectedToCapital(true)
-    fun updateHasActiveGreatWall() = transients().updateHasActiveGreatWall()
+    fun updateHasActiveEnemyMovementPenalty() = transients().updateHasActiveEnemyMovementPenalty()
     fun updateViewableTiles() = transients().updateViewableTiles()
     fun updateDetailedCivResources() = transients().updateCivResources()
 
@@ -964,6 +978,8 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         religionManager.endTurn(nextTurnStats.faith.toInt())
         totalFaithForContests += nextTurnStats.faith.toInt()
 
+        espionageManager.endTurn()
+
         if (isMajorCiv()) greatPeople.addGreatPersonPoints(getGreatPersonPointsForNextTurn()) // City-states don't get great people!
 
         for (city in cities.toList()) { // a city can be removed while iterating (if it's being razed) so we need to iterate over a copy
@@ -980,7 +996,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         goldenAges.endTurn(getHappiness())
         getCivUnits().forEach { it.endTurn() }  // This is the most expensive part of endTurn
         diplomacy.values.toList().forEach { it.nextTurn() } // we copy the diplomacy values so if it changes in-loop we won't crash
-        updateHasActiveGreatWall()
+        updateHasActiveEnemyMovementPenalty()
 
         cachedMilitaryMight = -1    // Reset so we don't use a value from a previous turn
     }

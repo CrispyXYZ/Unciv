@@ -6,9 +6,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.UncivGame
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.Notification
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.WrappableLabel
+import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.worldscreen.WorldScreen
@@ -16,8 +16,23 @@ import com.unciv.ui.worldscreen.WorldScreen
 class NotificationsOverviewTable(
     val worldScreen: WorldScreen,
     viewingPlayer: CivilizationInfo,
-    overviewScreen: EmpireOverviewScreen
+    overviewScreen: EmpireOverviewScreen,
+    persistedData: EmpireOverviewTabPersistableData? = null
 ) : EmpireOverviewTab(viewingPlayer, overviewScreen) {
+    class NotificationsTabPersistableData(
+            var scrollY: Float? = null
+    ) : EmpireOverviewTabPersistableData() {
+        override fun isEmpty() = scrollY == null
+    }
+    override val persistableData = (persistedData as? NotificationsTabPersistableData) ?: NotificationsTabPersistableData()
+    override fun activated(index: Int, caption: String, pager: TabbedPager) {
+        if (persistableData.scrollY != null)
+            pager.setPageScrollY(index, persistableData.scrollY!!)
+        super.activated(index, caption, pager)
+    }
+    override fun deactivated(index: Int, caption: String, pager: TabbedPager) {
+        persistableData.scrollY = pager.getPageScrollY(index)
+    }
 
     val notificationLog = viewingPlayer.notificationsLog
 
@@ -64,7 +79,7 @@ class NotificationsOverviewTable(
             val label = WrappableLabel(notification.text, labelWidth, Color.BLACK, 20)
 
             notificationTable.add(label)
-            notificationTable.background = ImageGetter.getRoundedEdgeRectangle()
+            notificationTable.background = BaseScreen.skinStrings.getUiBackground("OverviewScreen/NotificationOverviewTable/Notification", BaseScreen.skinStrings.roundedEdgeRectangle)
             notificationTable.touchable = Touchable.enabled
             notificationTable.onClick {
                 UncivGame.Current.resetToWorldScreen()

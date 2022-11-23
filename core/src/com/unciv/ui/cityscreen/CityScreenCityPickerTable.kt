@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popup.AskTextPopup
+import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toLabel
 
@@ -16,7 +17,7 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
     fun update() {
         val city = cityScreen.city
         val civInfo = city.civInfo
-        background = ImageGetter.getRoundedEdgeRectangle(civInfo.nation.getOuterColor())
+        background = BaseScreen.skinStrings.getUiBackground("CityScreen/CityPickerTable", BaseScreen.skinStrings.roundedEdgeRectangle, civInfo.nation.getOuterColor())
         clear()
 
         if (civInfo.cities.size > 1) {
@@ -57,6 +58,7 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
                 cityScreen,
                 label = "Please enter a new name for your city",
                 defaultText = city.name,
+                validate = { it != "" },
                 actionOnOk = { text ->
                     city.name = text
                     cityScreen.game.replaceCurrentScreen(CityScreen(city))
