@@ -1,7 +1,6 @@
 package com.unciv.logic.civilization
 
 import com.unciv.Constants
-import com.unciv.logic.GameInfo
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.city.CityInfo
 
@@ -43,7 +42,7 @@ class Spy() : IsPartOfGameInfoSerialization {
 
     fun endTurn() {
         --timeTillActionFinish
-        if (timeTillActionFinish != 0) return
+        if (timeTillActionFinish > 0) return
 
         when (action) {
             SpyAction.Moving -> {
@@ -58,12 +57,40 @@ class Spy() : IsPartOfGameInfoSerialization {
                     } else if (location.civInfo == civInfo) {
                         SpyAction.CounterIntelligence
                     } else {
-                        SpyAction.StealingTech
+                        attemptToStealTech(getStealableTechs(location.civInfo), location)
                     }
+            }
+            SpyAction.StealingTech -> {
+                val location = getLocation()!!
+                getStealableTechs(location.civInfo).randomOrNull()?.let { civInfo.tech.addTechnology(it) }
+                action = attemptToStealTech(getStealableTechs(location.civInfo), location)
+            }
+            SpyAction.None -> {
+                ++timeTillActionFinish
+                val location = getLocation() ?: return
+                if(location.civInfo != civInfo && !location.civInfo.isCityState())
+                    action = attemptToStealTech(getStealableTechs(location.civInfo), location, false)
             }
             else -> {
                 ++timeTillActionFinish // Not implemented yet, so don't do anything
             }
+        }
+    }
+
+    private fun attemptToStealTech(
+        techsStealable: HashSet<String>,
+        location: CityInfo,
+        notifyIfNothingToSteal: Boolean = true
+    ): SpyAction {
+        return if (techsStealable.isEmpty()) {
+            if(notifyIfNothingToSteal) civInfo.addNotification(
+                "Spy [$name] cannot steal from [${location.civInfo.civName}] because we've completely eclipsed them in research.",
+                location.location, NotificationIcon.Spy)
+            SpyAction.None
+        } else {
+            val stealingSpeed = location.cityStats.currentCityStats.science.toInt() * 5
+            timeTillActionFinish = techsStealable.maxOf { civInfo.tech.costOfTech(it) } / stealingSpeed
+            SpyAction.StealingTech
         }
     }
 
@@ -79,6 +106,17 @@ class Spy() : IsPartOfGameInfoSerialization {
     }
 
     fun isSetUp() = action !in listOf(SpyAction.Moving, SpyAction.None, SpyAction.EstablishNetwork)
+
+    private fun getAvailableTechs(): HashSet<String> {
+        return civInfo.gameInfo.ruleSet.technologies.keys
+            .filter { civInfo.tech.canBeResearched(it) }.toHashSet()
+    }
+    private fun getStealableTechs(otherCiv: CivilizationInfo): HashSet<String> {
+        return hashSetOf<String>().apply {
+            addAll(getAvailableTechs())
+            removeIf { !otherCiv.tech.techsResearched.contains(it) }
+        }
+    }
 
     fun getLocation(): CityInfo? {
         return civInfo.gameInfo.getCities().firstOrNull { it.id == location }
