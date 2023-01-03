@@ -65,10 +65,12 @@ class EspionageOverviewScreen(val civInfo: CivilizationInfo) : PickerScreen(true
     private fun updateSpyList() {
         spySelectionTable.clear()
         spySelectionTable.add("Spy".toLabel()).pad(10f)
+        spySelectionTable.add("Level".toLabel()).pad(10f)
         spySelectionTable.add("Location".toLabel()).pad(10f)
         spySelectionTable.add("Action".toLabel()).pad(10f).row()
         for (spy in civInfo.espionageManager.spyList) {
             spySelectionTable.add(spy.name.toLabel()).pad(10f)
+            spySelectionTable.add(spy.level.toString().toLabel()).pad(10f)
             spySelectionTable.add(spy.getLocationName().toLabel()).pad(10f)
             val actionString =
                 if (spy.action == SpyAction.None) SpyAction.None.stringName
@@ -89,7 +91,6 @@ class EspionageOverviewScreen(val civInfo: CivilizationInfo) : PickerScreen(true
                 // For now, only allow spies to be send to cities of other major civs and their hideout
                 // Not own cities as counterintelligence isn't implemented
                 // Not city-state civs as rigging elections isn't implemented
-                // Technically, stealing techs from other civs also isn't implemented, but its the first thing I'll add so this makes the most sense to allow.
                     if (city == null // hideout
                         || (city.civInfo.isMajorCiv()
                             && city.civInfo != civInfo

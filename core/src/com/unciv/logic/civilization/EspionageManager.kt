@@ -3,6 +3,8 @@ package com.unciv.logic.civilization
 import com.unciv.Constants
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.city.CityInfo
+import kotlin.math.ceil
+import kotlin.math.max
 
 enum class SpyAction(val stringName: String) {
     None("None"),
@@ -20,6 +22,7 @@ class Spy() : IsPartOfGameInfoSerialization {
     lateinit var name: String
     var timeTillActionFinish = 0
     var action = SpyAction.None
+    var level = 1
 
     @Transient
     lateinit var civInfo: CivilizationInfo
@@ -62,7 +65,10 @@ class Spy() : IsPartOfGameInfoSerialization {
             }
             SpyAction.StealingTech -> {
                 val location = getLocation()!!
-                getStealableTechs(location.civInfo).randomOrNull()?.let { civInfo.tech.addTechnology(it) }
+                getStealableTechs(location.civInfo).randomOrNull()?.let {
+                    levelUp()
+                    civInfo.tech.addTechnology(it)
+                }
                 action = attemptToStealTech(getStealableTechs(location.civInfo), location)
             }
             SpyAction.None -> {
@@ -77,19 +83,24 @@ class Spy() : IsPartOfGameInfoSerialization {
         }
     }
 
+    fun levelUp() {
+        if (level < 3) ++level
+    }
+
     private fun attemptToStealTech(
         techsStealable: HashSet<String>,
         location: CityInfo,
-        notifyIfNothingToSteal: Boolean = true
-    ): SpyAction {
+        notifyIfNothingToSteal: Boolean = true): SpyAction {
         return if (techsStealable.isEmpty()) {
             if(notifyIfNothingToSteal) civInfo.addNotification(
-                "Spy [$name] cannot steal from [${location.civInfo.civName}] because we've completely eclipsed them in research.",
+                "Spy [$name] can't steal from [${location.civInfo.civName}] because we've completely eclipsed them in research.",
                 location.location, NotificationIcon.Spy)
             SpyAction.None
         } else {
-            val stealingSpeed = location.cityStats.currentCityStats.science.toInt() * 5
-            timeTillActionFinish = techsStealable.maxOf { civInfo.tech.costOfTech(it) } / stealingSpeed
+            val defenceModifier = 100
+            val spyModifier: Double = 0.75 + 0.25*level
+            val stealingEffectiveness = max(1.0, location.cityStats.currentCityStats.science * defenceModifier * spyModifier)
+            timeTillActionFinish = ceil(techsStealable.maxOf { civInfo.tech.costOfTech(it) } * 125 / stealingEffectiveness).toInt()
             SpyAction.StealingTech
         }
     }

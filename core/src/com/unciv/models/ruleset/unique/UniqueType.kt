@@ -283,6 +283,9 @@ enum class UniqueType(val text: String, vararg targets: UniqueTarget, val flags:
 
     SpawnRebels("Rebel units may spawn", UniqueTarget.Global),
 
+    IncreasesCounterspyCatchingChance("Increases the chance of catching enemy spies by [amount]% [cityFilter]", UniqueTarget.Global),
+    ReducesSpyEffectiveness("Reduces the effectiveness of enemy spies by [amount]% [cityFilter]", UniqueTarget.Global),
+
     //endregion
 
     //endregion Global uniques
@@ -678,6 +681,8 @@ enum class UniqueType(val text: String, vararg targets: UniqueTarget, val flags:
     OneTimeRevealEntireMap("Reveals the entire map", UniqueTarget.Triggerable),  // used in tech
     OneTimeFreeBelief("Gain a free [beliefType] belief", UniqueTarget.Triggerable),
     OneTimeTriggerVoting("Triggers voting for the Diplomatic Victory", UniqueTarget.Triggerable),  // used in Building
+    OneTimeProvideSpy("Provides [amount] additional spy", UniqueTarget.Triggerable),
+    OneTimeLevelUpAllSpies("Level up all your existing spies", UniqueTarget.Triggerable),
 
     OneTimeGainStat("Gain [amount] [stat]", UniqueTarget.Ruins),
     OneTimeGainStatRange("Gain [amount]-[amount] [stat]", UniqueTarget.Ruins),

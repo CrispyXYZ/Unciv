@@ -721,6 +721,12 @@
 //		"requiredBuilding": "Market",
 //		"requiredTech": "Banking"
 //	},
+    {
+        "name": "Constabulary",
+        "hurryCostModifier": 15,
+        "uniques": ["Reduces the effectiveness of enemy spies by [25]% [in this city]"],
+        "requiredTech": "Banking"
+    },
 	{
 		"name": "Forbidden Palace",
 		"culture": 1,
@@ -933,6 +939,13 @@
 		"uniques": ["Must be on [River]","[+1 Production] from [River] tiles [in this city]"],
 		"requiredTech": "Electricity"
 	},
+    {
+        "name": "Police Station",
+        "hurryCostModifier": 15,
+        "uniques": ["Reduces the effectiveness of enemy spies by [25]% [in this city]"],
+        "requiredTech": "Electricity",
+        "requiredBuilding": "Constabulary"
+    },
 
 	// Modern Era
 
@@ -962,6 +975,16 @@
 		"uniques": ["[+1 Happiness] per [2] social policies adopted"],
 		"requiredTech": "Radio",
 		"quote": "'We live only to discover beauty, all else is a form of waiting' - Kahlil Gibran"
+	},
+	{
+		"name": "National Intelligence Agency",
+		"cost": 125,
+		"isNationalWonder": true,
+		"uniques": ["Requires a [Police Station] in all cities",
+			"Reduces the effectiveness of enemy spies by [15]% [in all cities]",
+			"Provides [1] additional spy",
+			"Level up all your existing spies"],
+		"requiredTech": "Radio"
 	},
 	{
 		"name": "Military Base",
@@ -1082,6 +1105,15 @@
 			"Hidden when [Scientific] Victory is disabled", "Cannot be hurried"],
 		"requiredTech": "Rocketry"
 	},
+    {
+        "name": "Great Firewall",
+        "cost": 1250,
+        "isWonder": true,
+        "uniques": ["Reduces the effectiveness of enemy spies by [25]% [in all cities]",
+            "Reduces the effectiveness of enemy spies by [99.9]% [in this city]"],
+        "requiredTech": "Computers",
+        "quote": "'Distrust and caution are the parents of security.' - Benjamin Franklin"
+    },
 
 	// Information Era
 
