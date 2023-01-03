@@ -1,3 +1,20 @@
+## 4.3.15
+
+Modding: Validate unique parameters for mods
+
+Display protecting civs for city-states
+
+Movement fix: units check if they can capture enemy units by whether they *will* be embarked, not by whether they *are* embarked
+
+By letstalkaboutdune:
+- SFX Update - Arrow, Crossbow (New), Metal Hit
+
+Fixed crash when policy prerequisite is a branch  - By vegeta1k95
+
+Fix another untranslated String in Policy Screen  - By CrispyXYZ
+
+added buttons for controlling music  - By alexban011
+
 ## 4.3.14
 
 AI moves civilians off capital to make way for spaceship parts
