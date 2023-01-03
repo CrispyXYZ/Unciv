@@ -36,6 +36,7 @@ class Spy() : IsPartOfGameInfoSerialization {
         toReturn.location = location
         toReturn.timeTillActionFinish = timeTillActionFinish
         toReturn.action = action
+        toReturn.level = level
         return toReturn
     }
 
