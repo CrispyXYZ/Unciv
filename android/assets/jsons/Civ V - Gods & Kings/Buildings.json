@@ -67,8 +67,8 @@
 		"culture": 1,
 		"isWonder": true,
 		"greatPersonPoints": {"Great Engineer": 1},
-        "uniques": ["[+10]% [Food] [in all cities]", "[+15]% Production when constructing [Archery] units [in this city]",
-            "[+15]% Production when constructing [Ranged Gunpowder] units [in this city]"],
+		"uniques": ["[+10]% [Food] [in all cities]", "[+15]% Production when constructing [Archery] units [in this city]",
+			"[+15]% Production when constructing [Ranged Gunpowder] units [in this city]"],
 		"requiredTech": "Archery",
 		"quote": "'It is not so much for its beauty that the forest makes a claim upon men's hearts, as for that subtle something, that quality of air, that emanation from old trees, that so wonderfully changes and renews a weary spirit.' - Robert Louis Stevenson"
 	},
@@ -721,12 +721,12 @@
 //		"requiredBuilding": "Market",
 //		"requiredTech": "Banking"
 //	},
-    {
-        "name": "Constabulary",
-        "hurryCostModifier": 15,
-        "uniques": ["Reduces the effectiveness of enemy spies by [25]% [in this city]"],
-        "requiredTech": "Banking"
-    },
+	{
+		"name": "Constabulary",
+		"hurryCostModifier": 15,
+		"uniques": ["Reduces the effectiveness of enemy spies by [25]% [in this city]"],
+		"requiredTech": "Banking"
+	},
 	{
 		"name": "Forbidden Palace",
 		"culture": 1,
@@ -939,13 +939,13 @@
 		"uniques": ["Must be on [River]","[+1 Production] from [River] tiles [in this city]"],
 		"requiredTech": "Electricity"
 	},
-    {
-        "name": "Police Station",
-        "hurryCostModifier": 15,
-        "uniques": ["Reduces the effectiveness of enemy spies by [25]% [in this city]"],
-        "requiredTech": "Electricity",
-        "requiredBuilding": "Constabulary"
-    },
+	{
+		"name": "Police Station",
+		"hurryCostModifier": 15,
+		"uniques": ["Reduces the effectiveness of enemy spies by [25]% [in this city]"],
+		"requiredTech": "Electricity",
+		"requiredBuilding": "Constabulary"
+	},
 
 	// Modern Era
 
@@ -981,6 +981,7 @@
 		"cost": 125,
 		"isNationalWonder": true,
 		"uniques": ["Requires a [Police Station] in all cities",
+			"Cost increases by [30] per owned city",
 			"Reduces the effectiveness of enemy spies by [15]% [in all cities]",
 			"Provides [1] additional spy",
 			"Level up all your existing spies"],
@@ -1105,15 +1106,15 @@
 			"Hidden when [Scientific] Victory is disabled", "Cannot be hurried"],
 		"requiredTech": "Rocketry"
 	},
-    {
-        "name": "Great Firewall",
-        "cost": 1250,
-        "isWonder": true,
-        "uniques": ["Reduces the effectiveness of enemy spies by [25]% [in all cities]",
-            "Reduces the effectiveness of enemy spies by [99.9]% [in this city]"],
-        "requiredTech": "Computers",
-        "quote": "'Distrust and caution are the parents of security.' - Benjamin Franklin"
-    },
+	{
+		"name": "Great Firewall",
+		"cost": 1250,
+		"isWonder": true,
+		"uniques": ["Reduces the effectiveness of enemy spies by [25]% [in all cities]",
+			"Reduces the effectiveness of enemy spies by [99.9]% [in this city]"],
+		"requiredTech": "Computers",
+		"quote": "'Distrust and caution are the parents of security.' - Benjamin Franklin"
+	},
 
 	// Information Era
 
