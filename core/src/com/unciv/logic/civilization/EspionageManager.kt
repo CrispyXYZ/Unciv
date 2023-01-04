@@ -85,7 +85,7 @@ class Spy() : IsPartOfGameInfoSerialization {
     }
 
     fun levelUp() {
-        if (level < 3) ++level
+        if (level < 3) ++level // Consider adding a notification?
     }
 
     private fun attemptToStealTech(
@@ -98,10 +98,11 @@ class Spy() : IsPartOfGameInfoSerialization {
                 location.location, NotificationIcon.Spy)
             SpyAction.None
         } else {
-            val defenceModifier = 100
+            val defenceModifier = location.espionage.getDefenceModifier()
             val spyModifier: Double = 0.75 + 0.25*level
-            val stealingEffectiveness = max(1.0, location.cityStats.currentCityStats.science * defenceModifier * spyModifier)
-            timeTillActionFinish = ceil(techsStealable.maxOf { civInfo.tech.costOfTech(it) } * 125 / stealingEffectiveness).toInt()
+            val sciencePoints = location.cityStats.currentCityStats.science
+            val effectiveness = max(1.0, sciencePoints * defenceModifier * spyModifier)
+            timeTillActionFinish = ceil(techsStealable.maxOf { civInfo.tech.costOfTech(it) } * 125 / effectiveness).toInt()
             SpyAction.StealingTech
         }
     }

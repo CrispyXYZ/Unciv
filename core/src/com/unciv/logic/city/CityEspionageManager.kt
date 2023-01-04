@@ -2,6 +2,7 @@ package com.unciv.logic.city
 
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.models.ruleset.unique.UniqueType
 
 class CityEspionageManager : IsPartOfGameInfoSerialization{
     @Transient
@@ -13,6 +14,15 @@ class CityEspionageManager : IsPartOfGameInfoSerialization{
 
     fun setTransients(cityInfo: CityInfo) {
         this.cityInfo = cityInfo
+    }
+
+    fun getDefenceModifier(): Int {
+        var modifier = 100
+        cityInfo.getMatchingUniques(UniqueType.ReducesSpyEffectiveness).forEach {
+            if(cityInfo.matchesFilter(it.params[1]))
+                modifier -= it.params[0].toFloat().toInt()
+        }
+        return modifier
     }
 
     fun hasSpyOf(civInfo: CivilizationInfo): Boolean {

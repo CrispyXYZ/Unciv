@@ -37,6 +37,8 @@ import com.unciv.models.ruleset.unique.UniqueType.OneTimeGainProphet
 import com.unciv.models.ruleset.unique.UniqueType.OneTimeGainStat
 import com.unciv.models.ruleset.unique.UniqueType.OneTimeGainStatRange
 import com.unciv.models.ruleset.unique.UniqueType.OneTimeGlobalSpiesWhenEnteringEra
+import com.unciv.models.ruleset.unique.UniqueType.OneTimeLevelUpAllSpies
+import com.unciv.models.ruleset.unique.UniqueType.OneTimeProvideSpy
 import com.unciv.models.ruleset.unique.UniqueType.OneTimeRevealCrudeMap
 import com.unciv.models.ruleset.unique.UniqueType.OneTimeRevealEntireMap
 import com.unciv.models.ruleset.unique.UniqueType.OneTimeRevealSpecificMapTiles
@@ -530,6 +532,21 @@ object UniqueTriggerActivation {
                             otherCiv.addNotification("After an unknown civilization entered the [${currentEra}], we have recruited [${spyName}] as a spy!", NotificationIcon.Spy)
                     }
                 }
+                return true
+            }
+
+            OneTimeProvideSpy -> {
+                if (!civInfo.isMajorCiv()) return false
+                if (!civInfo.gameInfo.isEspionageEnabled()) return false
+                val spyName = civInfo.espionageManager.addSpy()
+                civInfo.addNotification("We have recruited [${spyName}] as a spy!", NotificationIcon.Spy)
+                return true
+            }
+
+            OneTimeLevelUpAllSpies -> {
+                if (!civInfo.isMajorCiv()) return false
+                if (!civInfo.gameInfo.isEspionageEnabled()) return false
+                civInfo.espionageManager.spyList.forEach { it.levelUp() }
                 return true
             }
 
