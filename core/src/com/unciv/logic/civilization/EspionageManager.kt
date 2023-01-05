@@ -44,28 +44,40 @@ class Spy() : IsPartOfGameInfoSerialization {
         this.civInfo = civInfo
     }
 
+    fun kill() {
+        civInfo.espionageManager.killSpy(this)
+    }
+
     fun endTurn() {
         --timeTillActionFinish
         if (timeTillActionFinish > 0) return
 
         when (action) {
             SpyAction.Moving -> {
-                action = SpyAction.EstablishNetwork
-                timeTillActionFinish = 3 // Dependent on cultural familiarity level if that is ever implemented
+                action = if (getLocation()!!.civInfo == civInfo) {
+                    timeTillActionFinish = 1
+                    SpyAction.CounterIntelligence
+                } else {
+                    timeTillActionFinish = 3 // Dependent on cultural familiarity level if that is ever implemented
+                    SpyAction.EstablishNetwork
+                }
             }
             SpyAction.EstablishNetwork -> {
                 val location = getLocation()!! // This should be impossible to reach as going to the hideout sets your action to None.
                 action =
                     if (location.civInfo.isCityState()) {
                         SpyAction.RiggingElections
-                    } else if (location.civInfo == civInfo) {
-                        SpyAction.CounterIntelligence
                     } else {
                         attemptToStealTech(getStealableTechs(location.civInfo), location)
                     }
             }
+            SpyAction.CounterIntelligence -> {
+                timeTillActionFinish = 1
+                action = SpyAction.CounterIntelligence
+            }
             SpyAction.StealingTech -> {
                 val location = getLocation()!!
+                if(location.espionage.onTechSteal()) return  // Spy died
                 getStealableTechs(location.civInfo).randomOrNull()?.let {
                     levelUp()
                     civInfo.tech.addTechnology(it)
@@ -87,9 +99,7 @@ class Spy() : IsPartOfGameInfoSerialization {
     fun levelUp() {
         if (level < 3) {
             ++level
-            civInfo.addNotification(
-                "[$name] has been promoted!",
-                NotificationIcon.Spy)
+            civInfo.addNotification("[$name] has been promoted!", NotificationIcon.Spy)
         }
     }
 
@@ -141,7 +151,7 @@ class Spy() : IsPartOfGameInfoSerialization {
         1 -> "Recruit"
         2 -> "Agent"
         3 -> "Special Agent"
-        else -> "Error" // level is always < 4
+        else -> level.toString() // Unreachable because level is always < 4
     }
 
     fun getLocation(): CityInfo? {
@@ -156,6 +166,7 @@ class Spy() : IsPartOfGameInfoSerialization {
 class EspionageManager : IsPartOfGameInfoSerialization {
 
     var spyCount = 0
+    var replacementCountDown = 5;
     var spyList = mutableListOf<Spy>()
     var erasSpyEarnedFor = mutableListOf<String>()
 
@@ -167,6 +178,7 @@ class EspionageManager : IsPartOfGameInfoSerialization {
         toReturn.spyCount = spyCount
         toReturn.spyList.addAll(spyList.map { it.clone() })
         toReturn.erasSpyEarnedFor.addAll(erasSpyEarnedFor)
+        toReturn.replacementCountDown = replacementCountDown
         return toReturn
     }
 
@@ -180,6 +192,16 @@ class EspionageManager : IsPartOfGameInfoSerialization {
     fun endTurn() {
         for (spy in spyList)
             spy.endTurn()
+        if (spyList.size != spyCount) recruitReplacementSpy() // Recruit new spy if death
+    }
+
+    private fun recruitReplacementSpy() {
+        --replacementCountDown
+        if (replacementCountDown <= 0) {
+            val spyName = addSpy()
+            civInfo.addNotification("We have recruited [$spyName] to replace a spy that was killed in action!", NotificationIcon.Spy)
+            replacementCountDown = 5
+        }
     }
 
     private fun getSpyName(): String {
@@ -196,5 +218,9 @@ class EspionageManager : IsPartOfGameInfoSerialization {
         spyList.add(newSpy)
         ++spyCount
         return spyName
+    }
+
+    fun killSpy(spy: Spy) {
+        spyList.remove(spy)
     }
 }
