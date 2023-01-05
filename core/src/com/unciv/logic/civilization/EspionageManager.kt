@@ -85,7 +85,12 @@ class Spy() : IsPartOfGameInfoSerialization {
     }
 
     fun levelUp() {
-        if (level < 3) ++level // Consider adding a notification?
+        if (level < 3) {
+            ++level
+            civInfo.addNotification(
+                "[$name] has been promoted!",
+                NotificationIcon.Spy)
+        }
     }
 
     private fun attemptToStealTech(
@@ -94,7 +99,7 @@ class Spy() : IsPartOfGameInfoSerialization {
         notifyIfNothingToSteal: Boolean = true): SpyAction {
         return if (techsStealable.isEmpty()) {
             if(notifyIfNothingToSteal) civInfo.addNotification(
-                "Spy [$name] can't steal from [${location.civInfo.civName}] because we've completely eclipsed them in research.",
+                "[${getRank()}] [$name] cannot steal from [${location.civInfo.civName}] because we have completely eclipsed them in research!",
                 location.location, NotificationIcon.Spy)
             SpyAction.None
         } else {
@@ -124,11 +129,19 @@ class Spy() : IsPartOfGameInfoSerialization {
         return civInfo.gameInfo.ruleSet.technologies.keys
             .filter { civInfo.tech.canBeResearched(it) }.toHashSet()
     }
+
     private fun getStealableTechs(otherCiv: CivilizationInfo): HashSet<String> {
         return hashSetOf<String>().apply {
             addAll(getAvailableTechs())
             removeIf { !otherCiv.tech.techsResearched.contains(it) }
         }
+    }
+
+    fun getRank(): String = when(level) {
+        1 -> "Recruit"
+        2 -> "Agent"
+        3 -> "Special Agent"
+        else -> "Error" // level is always < 4
     }
 
     fun getLocation(): CityInfo? {

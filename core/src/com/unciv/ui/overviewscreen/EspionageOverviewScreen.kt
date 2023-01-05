@@ -70,7 +70,7 @@ class EspionageOverviewScreen(val civInfo: CivilizationInfo) : PickerScreen(true
         spySelectionTable.add("Action".toLabel()).pad(10f).row()
         for (spy in civInfo.espionageManager.spyList) {
             spySelectionTable.add(spy.name.toLabel()).pad(10f)
-            spySelectionTable.add(spy.level.toString().toLabel()).pad(10f)
+            spySelectionTable.add(spy.getRank().toLabel()).pad(10f)
             spySelectionTable.add(spy.getLocationName().toLabel()).pad(10f)
             val actionString =
                 if (spy.action == SpyAction.None) SpyAction.None.stringName
