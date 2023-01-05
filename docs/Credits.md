@@ -311,6 +311,7 @@ Unless otherwise specified, all the following are from [the Noun Project](https:
 -   [Bullets](https://thenounproject.com/term/bullets/810156/) By Aldric Rodriguez for Arsenal
 -   [St. Petersburg](https://thenounproject.com/search/?q=kremlin&i=1569704) By Carpe Diem for Kremlin
 -   [Ceilidh](https://thenounproject.com/term/ceilidh/403422/) By P Thanga Vignesh for Ceilidh Hall
+-   [Police](https://thenounproject.com/icon/police-462073/) By Wolf Böse for Constabulary
 
 #### Industrial Era
 
@@ -319,6 +320,8 @@ Unless otherwise specified, all the following are from [the Noun Project](https:
 -   [Stock exchange](https://thenounproject.com/term/stock-exchange/1210199/) By Pundimon
 -   [Military](https://thenounproject.com/term/military/1857519/) By myiconfinder for Military Academy
 -   [Factory](https://thenounproject.com/term/factory/545906/) By icon 54
+-   [Police station](https://thenounproject.com/icon/police-station-2751754/) By Vectors Point
+-   [government spy](https://thenounproject.com/icon/government-spy-376577/) By Ryan Beck for National Intelligence Agency
 
 #### Modern Era
 
@@ -343,6 +346,7 @@ Unless otherwise specified, all the following are from [the Noun Project](https:
 -   [Manhattan Project](https://thenounproject.com/search/?q=Nuclear%20Bomb&i=2041074) By corpus delicti, GR
 -   [Nuclear Plant](https://thenounproject.com/term/nuclear-plant/1132340/) By Andrejs Kirma
 -   [Spaceship](https://thenounproject.com/term/spaceship/1444621/) By Dinosoft Labs for Apollo Program
+-   [firewall](https://thenounproject.com/icon/firewall-5053318/) By Kevin for Great Firewall
 
 #### Information Era
 
