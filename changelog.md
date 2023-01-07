@@ -1,3 +1,42 @@
+## 4.3.17
+
+Fixed Air Sweep mechanic
+
+AI tries to stop civs who are about to win Scientific/Cultural victory
+
+No double copies of offers on AI trade counterproposals
+
+Disbanding unit moves to next unit only after disbanding
+
+Promote button sticks out more
+
+Translated display sizes
+
+Modding: Worker automation no longer considers foreign unique improvements when deciding if to remove features
+
+Modding: Non-replacing buildings display nicely in nation picker
+
+## 4.3.16
+
+Modding: Humidity/Temperature limits on terrain features
+
+Allow mass unit upgrades from the unit overview screen
+
+Calculate movement correctly for road + railroad combinations
+
+Modding: Workers pick the best improvement for resources
+
+By FiretronP75:
+- Add random select for map options
+- Fixed flat world generation
+
+By vegeta1k95:
+- Resource icons colored by type
+- Modding: allow custom TechPortraits
+- Fixed PolicyScreen branches requirements text
+
+Translate "Sell" in city screen  - By Ouaz
+
 ## 4.3.15
 
 Modding: Validate unique parameters for mods
