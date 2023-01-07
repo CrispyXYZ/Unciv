@@ -1308,6 +1308,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
             civ.addNotification(destructionText, civName, NotificationIcon.Death)
         getCivUnits().forEach { it.destroy() }
         tradeRequests.clear() // if we don't do this then there could be resources taken by "pending" trades forever
+        if (gameInfo.isEspionageEnabled()) espionageManager.spyList.forEach { espionageManager.killSpy(it) }
         for (diplomacyManager in diplomacy.values) {
             diplomacyManager.trades.clear()
             diplomacyManager.otherCiv().getDiplomacyManager(this).trades.clear()

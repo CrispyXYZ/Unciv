@@ -88,13 +88,8 @@ class EspionageOverviewScreen(val civInfo: CivilizationInfo) : PickerScreen(true
                 selectedSpy = spy
                 selectedSpyButton!!.label.setText("Cancel".tr())
                 for ((button, city) in moveSpyHereButtons)
-                // For now, only allow spies to be send to cities of major civs and their hideout
-                // Not city-state civs as rigging elections isn't implemented
                     if (city == null // hideout
-                        || (city.civInfo.isMajorCiv()
-                            && !city.espionage.hasSpyOf(civInfo)
-                        )
-                    ) {
+                        || !city.espionage.hasSpyOf(civInfo)) {
                         button.isVisible = true
                     }
             }

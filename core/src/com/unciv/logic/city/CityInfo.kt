@@ -345,6 +345,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         toReturn.cityConstructions = cityConstructions.clone()
         toReturn.expansion = expansion.clone()
         toReturn.religion = religion.clone()
+        toReturn.espionage = espionage.clone()
         toReturn.tiles = tiles
         toReturn.workedTiles = workedTiles
         toReturn.lockedTiles = lockedTiles
@@ -761,6 +762,9 @@ class CityInfo : IsPartOfGameInfoSerialization {
         // This should go after the population change, as that might impact the amount of followers in this city
         if (civInfo.gameInfo.isReligionEnabled()) religion.endTurn()
 
+        // Elections of City-State
+        if (civInfo.gameInfo.isEspionageEnabled() && civInfo.isCityState()) espionage.cityStateEndTurn()
+
         if (this in civInfo.cities) { // city was not destroyed
             health = min(health + 20, getMaxHealth())
             population.unassignExtraPopulation()
@@ -787,6 +791,11 @@ class CityInfo : IsPartOfGameInfoSerialization {
         for (unit in getCenterTile().getUnits().toList()) {
             if (!unit.movement.canPassThrough(getCenterTile()))
                 unit.movement.teleportToClosestMoveableTile()
+        }
+
+        // Move spies to spy hideout
+        for (spy in espionage.getSpies()) {
+            spy.moveTo(null)
         }
 
         if (isCapital() && civInfo.cities.isNotEmpty()) { // Move the capital if destroyed (by a nuke or by razing)

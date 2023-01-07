@@ -66,21 +66,25 @@ class Spy() : IsPartOfGameInfoSerialization {
                 val location = getLocation()!! // This should be impossible to reach as going to the hideout sets your action to None.
                 action =
                     if (location.civInfo.isCityState()) {
+                        timeTillActionFinish = getLocation()!!.espionage.turnsUntilNextElection!! - 1
                         SpyAction.RiggingElections
                     } else {
                         attemptToStealTech(getStealableTechs(location.civInfo), location)
                     }
             }
+            SpyAction.RiggingElections -> {
+                timeTillActionFinish = getLocation()!!.espionage.turnsUntilNextElection!! - 1
+            }
             SpyAction.CounterIntelligence -> {
                 timeTillActionFinish = 1
-                action = SpyAction.CounterIntelligence
             }
             SpyAction.StealingTech -> {
                 val location = getLocation()!!
                 if(location.espionage.onTechSteal()) return  // Spy died
-                getStealableTechs(location.civInfo).randomOrNull()?.let {
+                val tech = getStealableTechs(location.civInfo).randomOrNull()
+                if (tech != null) {
                     levelUp()
-                    civInfo.tech.addTechnology(it)
+                    civInfo.tech.addTechnology(tech)
                 }
                 action = attemptToStealTech(getStealableTechs(location.civInfo), location)
             }
@@ -89,9 +93,6 @@ class Spy() : IsPartOfGameInfoSerialization {
                 val location = getLocation() ?: return
                 if(location.civInfo != civInfo && !location.civInfo.isCityState())
                     action = attemptToStealTech(getStealableTechs(location.civInfo), location, false)
-            }
-            else -> {
-                ++timeTillActionFinish // Not implemented yet, so don't do anything
             }
         }
     }
@@ -133,7 +134,7 @@ class Spy() : IsPartOfGameInfoSerialization {
         timeTillActionFinish = 1
     }
 
-    fun isSetUp() = action !in listOf(SpyAction.Moving, SpyAction.None, SpyAction.EstablishNetwork)
+    fun isSetUp() = action !in listOf(SpyAction.Moving, SpyAction.EstablishNetwork)
 
     private fun getAvailableTechs(): HashSet<String> {
         return civInfo.gameInfo.ruleSet.technologies.keys
@@ -201,6 +202,7 @@ class EspionageManager : IsPartOfGameInfoSerialization {
             val spyName = addSpy()
             civInfo.addNotification("We have recruited [$spyName] to replace a spy that was killed in action!", NotificationIcon.Spy)
             replacementCountDown = 5
+            --spyCount
         }
     }
 
@@ -221,6 +223,7 @@ class EspionageManager : IsPartOfGameInfoSerialization {
     }
 
     fun killSpy(spy: Spy) {
+        spy.moveTo(null)
         spyList.remove(spy)
     }
 }
