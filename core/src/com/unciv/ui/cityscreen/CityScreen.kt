@@ -48,7 +48,7 @@ class CityScreen(
     }
 
     /** Toggles or adds/removes all state changing buttons */
-    val canChangeState = UncivGame.Current.worldScreen!!.canChangeState
+    var canChangeState = UncivGame.Current.worldScreen!!.canChangeState
 
     // Clockwise from the top-left
 

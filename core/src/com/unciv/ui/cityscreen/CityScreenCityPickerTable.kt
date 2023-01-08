@@ -20,7 +20,7 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
         background = BaseScreen.skinStrings.getUiBackground("CityScreen/CityPickerTable", BaseScreen.skinStrings.roundedEdgeRectangleShape, civInfo.nation.getOuterColor())
         clear()
 
-        if (civInfo.cities.size > 1) {
+        if (civInfo.cities.size > 1 && civInfo == civInfo.gameInfo.currentPlayerCiv) {
             val prevCityButton = Table() // so we get a wider clickable area than just the image itself
             val image = ImageGetter.getImage("OtherIcons/BackArrow")
             image.color = civInfo.nation.getInnerColor()
@@ -70,7 +70,7 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
 
         add(cityNameTable).width(stage.width / 4)
 
-        if (civInfo.cities.size > 1) {
+        if (civInfo.cities.size > 1 && civInfo == civInfo.gameInfo.currentPlayerCiv) {
             val nextCityButton = Table() // so we gt a wider clickable area than just the image itself
             val image = ImageGetter.getImage("OtherIcons/BackArrow")
             image.setSize(25f, 25f)

@@ -11,6 +11,7 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.Spy
 import com.unciv.logic.civilization.SpyAction
 import com.unciv.models.translations.tr
+import com.unciv.ui.cityscreen.CityScreen
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.pickerscreens.PickerScreen
 import com.unciv.ui.utils.AutoScrollPane
@@ -93,7 +94,26 @@ class EspionageOverviewScreen(val civInfo: CivilizationInfo) : PickerScreen(true
                         button.isVisible = true
                     }
             }
-            spySelectionTable.add(moveSpyButton).pad(5f).row()
+            val extraActionButton: TextButton?
+            if (spy.getLocation()?.civInfo?.isCityState() == true && spy.isSetUp()) {
+                extraActionButton = "Coup".toTextButton()
+                extraActionButton.onClick {
+
+                }
+            } else if (spy.getLocation()?.civInfo?.isMajorCiv() == true && spy.getLocation()?.civInfo != civInfo && spy.isSetUp()) {
+                extraActionButton = "View".toTextButton()
+                extraActionButton.onClick {
+                    game.pushScreen(CityScreen(spy.getLocation()!!).apply { canChangeState = false; update() })
+                }
+            } else {
+                extraActionButton = null
+            }
+
+            spySelectionTable.add(moveSpyButton).pad(5f)
+            if (extraActionButton == null)
+                spySelectionTable.add().pad(5f).row()
+            else
+                spySelectionTable.add(extraActionButton).pad(5f).row()
         }
     }
 

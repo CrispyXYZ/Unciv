@@ -311,10 +311,10 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
             table.add(getLowerPriorityButton(constructionQueueIndex, constructionName, city)).right()
         else table.add().right()
 
-        table.add(getRemoveFromQueueButton(constructionQueueIndex, city)).right()
+        if(cityScreen.city.civInfo == cityScreen.city.civInfo.gameInfo.currentPlayerCiv) table.add(getRemoveFromQueueButton(constructionQueueIndex, city)).right()
 
         table.touchable = Touchable.enabled
-        table.onClick {
+        if(cityScreen.canCityBeChanged()) table.onClick {
             if (selectedQueueEntry == constructionQueueIndex) {
                 city.cityConstructions.removeFromQueue(constructionQueueIndex, false)
                 selectedQueueEntry = -1
