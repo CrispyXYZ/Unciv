@@ -71,6 +71,8 @@ fun advancedTab(
 
     addFontSizeMultiplier(this, settings, onFontChange)
 
+    optionsPopup.addCheckbox(this, "{Show espionage option in new game screen}\n{HIGHLY EXPERIMENTAL - YOU HAVE BEEN WARNED!}", settings.enableEspionageOption) { settings.enableEspionageOption = it }
+
     addTranslationGeneration(this, optionsPopup)
 
     addSetUserId(this, settings)
