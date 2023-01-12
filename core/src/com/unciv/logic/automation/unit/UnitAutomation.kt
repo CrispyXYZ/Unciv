@@ -9,6 +9,7 @@ import com.unciv.logic.battle.CityCombatant
 import com.unciv.logic.battle.ICombatant
 import com.unciv.logic.battle.MapUnitCombatant
 import com.unciv.logic.city.CityInfo
+import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.logic.civilization.ReligionState
 import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
 import com.unciv.logic.map.MapUnit
@@ -375,9 +376,10 @@ object UnitAutomation {
         return unit.currentMovement == 0f
     }
 
-    fun getBombardTargets(city: CityInfo): Sequence<TileInfo> =
+    /** Get a list of visible tiles which have something attackable */
+    fun getBombardableTiles(city: CityInfo): Sequence<TileInfo> =
             city.getCenterTile().getTilesInDistance(city.range)
-                    .filter { BattleHelper.containsAttackableEnemy(it, CityCombatant(city)) }
+                    .filter { it.isVisible(city.civInfo) && BattleHelper.containsAttackableEnemy(it, CityCombatant(city)) }
 
     /** Move towards the closest attackable enemy of the [unit].
      *
@@ -547,7 +549,7 @@ object UnitAutomation {
     }
 
     private fun chooseBombardTarget(city: CityInfo): ICombatant? {
-        var targets = getBombardTargets(city).map { Battle.getMapCombatantOfTile(it)!! }
+        var targets = getBombardableTiles(city).map { Battle.getMapCombatantOfTile(it)!! }
         if (targets.none()) return null
 
         val siegeUnits = targets
@@ -637,7 +639,7 @@ object UnitAutomation {
         if (tryGoToRuinAndEncampment(unit) && (unit.currentMovement == 0f || unit.isDestroyed)) return
         if (unit.health < 80 && tryHealUnit(unit)) return
         if (tryExplore(unit)) return
-        unit.civInfo.addNotification("${unit.shortDisplayName()} finished exploring.", unit.currentTile.position, unit.name, "OtherIcons/Sleep")
+        unit.civInfo.addNotification("${unit.shortDisplayName()} finished exploring.", unit.currentTile.position, NotificationCategory.Units, unit.name, "OtherIcons/Sleep")
         unit.action = null
     }
 

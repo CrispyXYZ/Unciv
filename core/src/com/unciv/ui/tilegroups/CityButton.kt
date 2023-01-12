@@ -7,10 +7,8 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
-import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
-import com.unciv.Constants
 import com.unciv.logic.battle.CityCombatant
 import com.unciv.logic.city.CityConstructions
 import com.unciv.logic.city.CityInfo
@@ -26,14 +24,10 @@ import com.unciv.ui.trade.DiplomacyScreen
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.BorderedTable
 import com.unciv.ui.utils.Fonts
-import com.unciv.ui.utils.extensions.brighten
 import com.unciv.ui.utils.extensions.center
 import com.unciv.ui.utils.extensions.centerX
 import com.unciv.ui.utils.extensions.colorFromRGB
 import com.unciv.ui.utils.extensions.onClick
-import com.unciv.ui.utils.extensions.setSize
-import com.unciv.ui.utils.extensions.surroundWithCircle
-import com.unciv.ui.utils.extensions.surroundWithThinCircle
 import com.unciv.ui.utils.extensions.toGroup
 import com.unciv.ui.utils.extensions.toLabel
 import kotlin.math.max
@@ -172,13 +166,18 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
     private fun addAirUnitTable() {
         if (!showAdditionalInfoTags || tileGroup.tileInfo.airUnits.isEmpty()) return
         val secondaryColor = city.civInfo.nation.getInnerColor()
-        val airUnitTable = Table()
-        airUnitTable.background = BaseScreen.skinStrings.getUiBackground("WorldScreen/CityButton/AirUnitTable", BaseScreen.skinStrings.roundedEdgeRectangleShape, city.civInfo.nation.getOuterColor()).apply { setMinSize(0f,0f) }
+        val airUnitTable = BorderedTable(
+            path="WorldScreen/CityButton/AirUnitTable",
+            defaultInner = BaseScreen.skinStrings.roundedEdgeRectangleSmallShape,
+            defaultBorder = BaseScreen.skinStrings.roundedEdgeRectangleSmallShape,
+            innerColor = city.civInfo.nation.getOuterColor(),
+            borderColor = city.civInfo.nation.getOuterColor()
+        )
         val aircraftImage = ImageGetter.getImage("OtherIcons/Aircraft")
         aircraftImage.color = secondaryColor
         airUnitTable.add(aircraftImage).size(15f)
         airUnitTable.add(tileGroup.tileInfo.airUnits.size.toString().toLabel(secondaryColor,14))
-        add(airUnitTable).row()
+        add(airUnitTable).padBottom(5f).minWidth(50f).row()
     }
 
     private fun belongsToViewingCiv() = city.civInfo == worldScreen.viewingCiv
@@ -248,27 +247,27 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
 
         if (belongsToViewingCiv() && city.isConnectedToCapital() && !city.isCapital()) {
             val connectionImage = ImageGetter.getStatIcon("CityConnection")
-            table.add(connectionImage).size(16f)
+            table.add(connectionImage).size(18f)
         }
 
         if (city.isInResistance()) {
             val resistanceImage = ImageGetter.getImage("StatIcons/Resistance")
-            table.add(resistanceImage).size(16f).padLeft(2f)
+            table.add(resistanceImage).size(18f).padLeft(2f)
         }
 
         if (city.isPuppet) {
             val puppetImage = ImageGetter.getImage("OtherIcons/Puppet")
-            table.add(puppetImage).size(16f).padLeft(2f)
+            table.add(puppetImage).size(18f).padLeft(2f)
         }
 
         if (city.isBeingRazed) {
             val fireImage = ImageGetter.getImage("OtherIcons/Fire")
-            table.add(fireImage).size(16f).padLeft(2f)
+            table.add(fireImage).size(18f).padLeft(2f)
         }
 
         if (belongsToViewingCiv() && city.isWeLoveTheKingDayActive()) {
             val wtlkdImage = ImageGetter.getImage("OtherIcons/WLTKD")
-            table.add(wtlkdImage).size(16f).padLeft(2f)
+            table.add(wtlkdImage).size(18f).padLeft(2f)
         }
 
         return table
@@ -316,7 +315,7 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
         if (!forPopup) {
             val cityReligion = city.religion.getMajorityReligion()
             if (cityReligion != null) {
-                val religionImage = ImageGetter.getReligionImage(cityReligion.getIconName()).apply {
+                val religionImage = ImageGetter.getReligionIcon(cityReligion.getIconName()).apply {
                     color = secondaryColor }.toGroup(20f)
                 labelTable.add(religionImage).size(20f).padLeft(5f)
             }
@@ -446,7 +445,7 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
                 table.add(productionBar).padTop(1f).padBottom(1f)
             }
 
-            val constructionImage = ImageGetter.getPortraitImage(cityCurrentConstruction.name, 24f)
+            val constructionImage = ImageGetter.getConstructionPortrait(cityCurrentConstruction.name, 24f)
             table.add(constructionImage).minHeight(32f).minWidth(26f)
                 .expand().center().right().pad(0f).padRight(4f).padLeft(3f)
             table.pack()

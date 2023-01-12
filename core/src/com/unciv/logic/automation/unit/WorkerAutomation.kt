@@ -10,6 +10,7 @@ import com.unciv.logic.automation.civilization.NextTurnAutomation
 import com.unciv.logic.automation.unit.UnitAutomation.wander
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.logic.map.BFS
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.RoadStatus
@@ -195,7 +196,7 @@ class WorkerAutomation(
         }
 
         debug("WorkerAutomation: %s -> nothing to do", unit.label())
-        unit.civInfo.addNotification("${unit.shortDisplayName()} has no work to do.", currentTile.position, unit.name, "OtherIcons/Sleep")
+        unit.civInfo.addNotification("${unit.shortDisplayName()} has no work to do.", currentTile.position, NotificationCategory.Units, unit.name, "OtherIcons/Sleep")
 
         // Idle CS units should wander so they don't obstruct players so much
         if (unit.civInfo.isCityState())
@@ -220,7 +221,7 @@ class WorkerAutomation(
 
         val isCandidateTilePredicate = { it: TileInfo -> it.isLand && unit.movement.canPassThrough(it) }
         val currentTile = unit.getTile()
-        val cityTilesToSeek = tilesOfConnectedCities.sortedBy { it.aerialDistanceTo(currentTile) }
+        val cityTilesToSeek = ArrayList(tilesOfConnectedCities.sortedBy { it.aerialDistanceTo(currentTile) })
 
         for (toConnectCity in candidateCities) {
             val toConnectTile = toConnectCity.getCenterTile()
@@ -232,8 +233,9 @@ class WorkerAutomation(
                     )
                     bfsCache[toConnectTile.position] = this@apply
                 }
+
             while (true) {
-                for (cityTile in cityTilesToSeek) {
+                for (cityTile in cityTilesToSeek.toList()) { // copy since we cahnge while running
                     if (!bfs.hasReachedTile(cityTile)) continue
                     // we have a winner!
                     val pathToCity = bfs.getPathTo(cityTile)
@@ -245,11 +247,12 @@ class WorkerAutomation(
                         val reachableTile = roadableTiles
                             .sortedBy { it.aerialDistanceTo(unit.getTile()) }
                             .firstOrNull {
-                                unit.movement.canMoveTo(it) && unit.movement.canReach(
-                                    it
-                                )
+                                unit.movement.canMoveTo(it) && unit.movement.canReach(it)
                             }
-                            ?: continue
+                        if (reachableTile == null) {
+                            cityTilesToSeek.remove(cityTile) // Apparently we can't reach any of these tiles at all
+                            continue
+                        }
                         tileToConstructRoadOn = reachableTile
                         unit.movement.headTowards(tileToConstructRoadOn)
                     }
@@ -262,7 +265,7 @@ class WorkerAutomation(
                         unit.label(), bfs.startingPoint.getCity()?.name, cityTile.getCity()!!.name, tileToConstructRoadOn)
                     return true
                 }
-                if (bfs.hasEnded()) break
+                if (bfs.hasEnded()) break // We've found another city that this one can connect to
                 bfs.nextStep()
             }
             debug("WorkerAutomation: ${unit.label()} -> connect city ${bfs.startingPoint.getCity()?.name} failed at BFS size ${bfs.size()}")

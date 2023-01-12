@@ -6,6 +6,7 @@ import com.unciv.logic.city.CityConstructions
 import com.unciv.logic.city.INonPerpetualConstruction
 import com.unciv.logic.city.PerpetualConstruction
 import com.unciv.logic.civilization.CityAction
+import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.map.BFS
@@ -103,6 +104,7 @@ class ConstructionAutomation(val cityConstructions: CityConstructions){
         civInfo.addNotification(
             "Work has started on [$chosenConstruction]",
             CityAction(cityInfo.location),
+            NotificationCategory.Production,
             NotificationIcon.Construction
         )
         cityConstructions.currentConstructionFromQueue = chosenConstruction
@@ -171,8 +173,11 @@ class ConstructionAutomation(val cityConstructions: CityConstructions){
             }.isBuildable()
         if (workerEquivalents.none()) return // for mods with no worker units
 
-        if (workers < cities) {
-            var modifier = cities / (workers + 0.1f) // The worse our worker to city ratio is, the more desperate we are
+        // For the first 3 cities, dedicate a worker, from then on only build another worker if you have 12 cities.
+        val numberOfWorkersWeWant = if (cities < 4) cities else max(3, cities/3)
+
+        if (workers < numberOfWorkersWeWant) {
+            var modifier = numberOfWorkersWeWant / (workers + 0.1f) // The worse our worker to city ratio is, the more desperate we are
             if (!cityIsOverAverageProduction) modifier /= 5 // higher production cities will deal with this
             addChoice(relativeCostEffectiveness, workerEquivalents.minByOrNull { it.cost }!!.name, modifier)
         }

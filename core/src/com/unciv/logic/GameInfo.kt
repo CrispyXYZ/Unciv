@@ -10,11 +10,11 @@ import com.unciv.logic.BackwardCompatibility.migrateBarbarianCamps
 import com.unciv.logic.BackwardCompatibility.removeMissingModReferences
 import com.unciv.logic.GameInfo.Companion.CURRENT_COMPATIBILITY_NUMBER
 import com.unciv.logic.GameInfo.Companion.FIRST_WITHOUT
-import com.unciv.logic.automation.civilization.NextTurnAutomation
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.CivilizationInfoPreview
 import com.unciv.logic.civilization.LocationAction
+import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.civilization.TechManager
@@ -62,6 +62,10 @@ data class CompatibilityVersion(
 
 }
 
+data class VictoryData(val winningCiv:String, val victoryType:String, val victoryTurn:Int){
+    constructor(): this("","",0) // for serializer
+}
+
 class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion {
     companion object {
         /** The current compatibility version of [GameInfo]. This number is incremented whenever changes are made to the save file structure that guarantee that
@@ -88,6 +92,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     var currentPlayer = ""
     var currentTurnStartTime = 0L
     var gameId = UUID.randomUUID().toString() // random string
+
+    var victoryData:VictoryData? = null
 
     // Maps a civ to the civ they voted for
     var diplomaticVictoryVotesCast = HashMap<String, String>()
@@ -151,6 +157,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.diplomaticVictoryVotesCast.putAll(diplomaticVictoryVotesCast)
         toReturn.oneMoreTurnMode = oneMoreTurnMode
         toReturn.customSaveLocation = customSaveLocation
+        toReturn.victoryData = victoryData
+
         return toReturn
     }
 
@@ -240,63 +248,79 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     //region State changing functions
 
     fun nextTurn() {
-        val previousHumanPlayer = getCurrentPlayerCivilization()
-        var thisPlayer = previousHumanPlayer // not calling it currentPlayer because that's already taken and I can't think of a better name
-        var currentPlayerIndex = civilizations.indexOf(thisPlayer)
 
+        var player = currentPlayerCiv
+        var playerIndex = civilizations.indexOf(player)
 
-        fun endTurn() {
-            thisPlayer.endTurn()
-            currentPlayerIndex = (currentPlayerIndex + 1) % civilizations.size
-            if (currentPlayerIndex == 0) {
+        // We rotate Players in cycle: 1,2...N,1,2...
+        fun setNextPlayer() {
+            playerIndex = (playerIndex + 1) % civilizations.size
+            if (playerIndex == 0) {
                 turns++
                 if (UncivGame.Current.simulateUntilTurnForDebug != 0)
                     debug("Starting simulation of turn %s", turns)
             }
-            thisPlayer = civilizations[currentPlayerIndex]
+            player = civilizations[playerIndex]
         }
 
-        //check is important or else switchTurn
-        //would skip a turn if an AI civ calls nextTurn
-        //this happens when resigning a multiplayer game
-        if (thisPlayer.isHuman()) {
-            endTurn()
+
+        // Ending current player's turn
+        //  (Check is important or else switchTurn
+        //  would skip a turn if an AI civ calls nextTurn
+        //  this happens when resigning a multiplayer game)
+        if (player.isHuman()) {
+            player.endTurn()
+            setNextPlayer()
         }
 
-        while (thisPlayer.playerType == PlayerType.AI
-                || turns < UncivGame.Current.simulateUntilTurnForDebug
+        // Do we automatically simulate until N turn?
+        val isSimulation = turns < UncivGame.Current.simulateUntilTurnForDebug
                 || turns < simulateMaxTurns && simulateUntilWin
-                // For multiplayer, if there are 3+ players and one is defeated or spectator,
-                // we'll want to skip over their turn
-                || gameParameters.isOnlineMultiplayer && (thisPlayer.isDefeated() || thisPlayer.isSpectator() && thisPlayer.playerId != UncivGame.Current.settings.multiplayer.userId)
-        ) {
-            thisPlayer.startTurn()
-            if (!thisPlayer.isDefeated() || thisPlayer.isBarbarian()) {
-                NextTurnAutomation.automateCivMoves(thisPlayer)
+        val isOnline = gameParameters.isOnlineMultiplayer
 
-                // Placing barbarians after their turn
-                if (thisPlayer.isBarbarian() && !gameParameters.noBarbarians)
-                    barbarians.updateEncampments()
+        // We process player automatically if:
+        while (isSimulation ||                      // simulation is active
+                player.isAI() ||                    // or player is AI
+                isOnline && (player.isDefeated() || // or player is online defeated
+                        player.isSpectator()))      // or player is online spectator
+        {
 
-                // exit simulation mode when player wins
-                if (thisPlayer.victoryManager.hasWon() && simulateUntilWin) {
-                    // stop simulation
-                    simulateUntilWin = false
-                    break
-                }
+            // Starting preparations
+            player.startTurn()
+
+            // Automation done here
+            player.doTurn()
+
+            // Do we need to break if player won?
+            if (simulateUntilWin && player.victoryManager.hasWon()) {
+                simulateUntilWin = false
+                break
             }
-            endTurn()
+
+            // Clean up
+            player.endTurn()
+
+            // To the next player
+            setNextPlayer()
         }
+
         if (turns == UncivGame.Current.simulateUntilTurnForDebug)
             UncivGame.Current.simulateUntilTurnForDebug = 0
 
+        // We found human player, so we are making him current
         currentTurnStartTime = System.currentTimeMillis()
-        currentPlayer = thisPlayer.civName
+        currentPlayer = player.civName
         currentPlayerCiv = getCivilization(currentPlayer)
-        thisPlayer.startTurn()
-        if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear() // no popups for spectators
 
-        if (turns % 10 == 0) //todo measuring actual play time might be nicer
+        // Starting his turn
+        player.startTurn()
+
+        // No popups for spectators
+        if (currentPlayerCiv.isSpectator())
+            currentPlayerCiv.popupAlerts.clear()
+
+        // Play some nice music TODO: measuring actual play time might be nicer
+        if (turns % 10 == 0)
             UncivGame.Current.musicController.chooseTrack(
                 currentPlayerCiv.civName,
                 MusicMood.peaceOrWar(currentPlayerCiv.isAtWar()), MusicTrackChooserFlags.setNextTurn
@@ -304,7 +328,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
         // Start our turn immediately before the player can make decisions - affects
         // whether our units can commit automated actions and then be attacked immediately etc.
-        notifyOfCloseEnemyUnits(thisPlayer)
+        notifyOfCloseEnemyUnits(player)
     }
 
     private fun notifyOfCloseEnemyUnits(thisPlayer: CivilizationInfo) {
@@ -356,21 +380,21 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         if (tiles.size < 3) {
             for (tile in tiles) {
                 val unitName = tile.militaryUnit!!.name
-                thisPlayer.addNotification("An enemy [$unitName] was spotted $inOrNear our territory", tile.position, NotificationIcon.War, unitName)
+                thisPlayer.addNotification("An enemy [$unitName] was spotted $inOrNear our territory", tile.position, NotificationCategory.War, NotificationIcon.War, unitName)
             }
         } else {
             val positions = tiles.asSequence().map { it.position }
-            thisPlayer.addNotification("[${tiles.size}] enemy units were spotted $inOrNear our territory", LocationAction(positions), NotificationIcon.War)
+            thisPlayer.addNotification("[${tiles.size}] enemy units were spotted $inOrNear our territory", LocationAction(positions), NotificationCategory.War, NotificationIcon.War)
         }
     }
 
     private fun addBombardNotification(thisPlayer: CivilizationInfo, cities: List<CityInfo>) {
         if (cities.size < 3) {
             for (city in cities)
-                thisPlayer.addNotification("Your city [${city.name}] can bombard the enemy!", city.location, NotificationIcon.City, NotificationIcon.Crosshair)
+                thisPlayer.addNotification("Your city [${city.name}] can bombard the enemy!", city.location, NotificationCategory.War, NotificationIcon.City, NotificationIcon.Crosshair)
         } else {
             val positions = cities.asSequence().map { it.location }
-            thisPlayer.addNotification("[${cities.size}] of your cities can bombard the enemy!", LocationAction(positions), NotificationIcon.City, NotificationIcon.Crosshair)
+            thisPlayer.addNotification("[${cities.size}] of your cities can bombard the enemy!", LocationAction(positions),  NotificationCategory.War, NotificationIcon.City, NotificationIcon.Crosshair)
         }
     }
 
@@ -432,6 +456,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         civInfo.addNotification(
             text,
             LocationAction(positions),
+            NotificationCategory.General,
             "ResourceIcons/$resourceName"
         )
         return true

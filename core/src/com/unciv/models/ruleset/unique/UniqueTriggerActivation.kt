@@ -7,6 +7,7 @@ import com.unciv.logic.civilization.CivFlags
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.LocationAction
 import com.unciv.logic.civilization.MayaLongCountAction
+import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.civilization.ReligionState
 import com.unciv.logic.map.MapUnit
@@ -93,6 +94,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notification,
                         placedUnit.getTile().position,
+                        NotificationCategory.Units,
                         placedUnit.name
                     )
                 }
@@ -114,6 +116,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notification,
                         LocationAction(tilesUnitsWerePlacedOn),
+                        NotificationCategory.Units,
                         civInfo.getEquivalentUnit(unit).name
                     )
                 }
@@ -139,6 +142,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notificationText,
                         LocationAction(placedUnit.getTile().position, tile?.position),
+                        NotificationCategory.Units,
                         placedUnit.name
                     )
                 }
@@ -151,7 +155,7 @@ object UniqueTriggerActivation {
                 if (civInfo.isSpectator()) return false
                 civInfo.policies.freePolicies++
                 if (notification != null) {
-                    civInfo.addNotification(notification, NotificationIcon.Culture)
+                    civInfo.addNotification(notification, NotificationCategory.General, NotificationIcon.Culture)
                 }
                 return true
             }
@@ -159,14 +163,14 @@ object UniqueTriggerActivation {
                 if (civInfo.isSpectator()) return false
                 civInfo.policies.freePolicies += unique.params[0].toInt()
                 if (notification != null) {
-                    civInfo.addNotification(notification, NotificationIcon.Culture)
+                    civInfo.addNotification(notification, NotificationCategory.General, NotificationIcon.Culture)
                 }
                 return true
             }
             OneTimeEnterGoldenAge -> {
                 civInfo.goldenAges.enterGoldenAge()
                 if (notification != null) {
-                    civInfo.addNotification(notification, NotificationIcon.Happiness)
+                    civInfo.addNotification(notification, NotificationCategory.General, NotificationIcon.Happiness)
                 }
                 return true
             }
@@ -181,9 +185,9 @@ object UniqueTriggerActivation {
                     // Anyone an idea for a good icon?
                     if (unique.type == MayanGainGreatPerson) {
                         civInfo.greatPeople.mayaLimitedFreeGP++
-                        civInfo.addNotification(notification!!, MayaLongCountAction(), MayaCalendar.notificationIcon)
+                        civInfo.addNotification(notification!!, MayaLongCountAction(), NotificationCategory.General, MayaCalendar.notificationIcon)
                     } else if (notification != null)
-                        civInfo.addNotification(notification)
+                        civInfo.addNotification(notification, NotificationCategory.General)
                     return true
                 } else {
                     if (unique.type == MayanGainGreatPerson)
@@ -221,6 +225,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notification,
                         LocationAction(applicableCities.map { it.location }),
+                        NotificationCategory.City,
                         NotificationIcon.Population
                     )
                 return applicableCities.any()
@@ -237,6 +242,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notificationText,
                         LocationAction(randomCity.location, tile?.position),
+                        NotificationCategory.City,
                         NotificationIcon.Population
                     )
                 }
@@ -247,7 +253,7 @@ object UniqueTriggerActivation {
                 if (civInfo.isSpectator()) return false
                 civInfo.tech.freeTechs += 1
                 if (notification != null) {
-                    civInfo.addNotification(notification, NotificationIcon.Science)
+                    civInfo.addNotification(notification, NotificationCategory.General, NotificationIcon.Science)
                 }
                 return true
             }
@@ -255,7 +261,7 @@ object UniqueTriggerActivation {
                 if (civInfo.isSpectator()) return false
                 civInfo.tech.freeTechs += unique.params[0].toInt()
                 if (notification != null) {
-                    civInfo.addNotification(notification, NotificationIcon.Science)
+                    civInfo.addNotification(notification, NotificationCategory.General, NotificationIcon.Science)
                 }
                 return true
             }
@@ -278,7 +284,8 @@ object UniqueTriggerActivation {
                             notification.fillPlaceholders(*(techsToResearch.map { it.name }
                                 .toTypedArray()))
                         else notification
-                    civInfo.addNotification(notificationText, LocationAction(tile?.position), NotificationIcon.Science)
+                    civInfo.addNotification(notificationText, LocationAction(tile?.position),
+                        NotificationCategory.General, NotificationIcon.Science)
                 }
 
                 return true
@@ -289,6 +296,7 @@ object UniqueTriggerActivation {
                 if (notification != null) {
                     civInfo.addNotification(
                         notification,
+                        NotificationCategory.General,
                         NotificationIcon.Construction
                     )
                 }
@@ -297,7 +305,7 @@ object UniqueTriggerActivation {
 
             OneTimeRevealEntireMap -> {
                 if (notification != null) {
-                    civInfo.addNotification(notification, LocationAction(tile?.position), NotificationIcon.Scout)
+                    civInfo.addNotification(notification, LocationAction(tile?.position), NotificationCategory.General, NotificationIcon.Scout)
                 }
                 civInfo.addExploredTiles(civInfo.gameInfo.tileMap.values.asSequence().map { it.position })
                 return true
@@ -323,6 +331,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notification,
                         LocationAction(promotedUnitLocations),
+                        NotificationCategory.Units,
                         "unitPromotionIcons/${unique.params[1]}"
                     )
                 }
@@ -335,7 +344,7 @@ object UniqueTriggerActivation {
                     civInfo.turnsForGreatPersonFromCityState() / 2
                 )
                 if (notification != null) {
-                    civInfo.addNotification(notification, NotificationIcon.CityState)
+                    civInfo.addNotification(notification, NotificationCategory.Diplomacy, NotificationIcon.CityState)
                 }
                 return true
             }
@@ -364,7 +373,7 @@ object UniqueTriggerActivation {
 
                 civInfo.addStat(stat, unique.params[0].toInt())
                 if (notification != null)
-                    civInfo.addNotification(notification, LocationAction(tile?.position), stat.notificationIcon)
+                    civInfo.addNotification(notification, LocationAction(tile?.position), NotificationCategory.General, stat.notificationIcon)
                 return true
             }
             OneTimeGainStatRange -> {
@@ -390,7 +399,7 @@ object UniqueTriggerActivation {
                         if (notification.hasPlaceholderParameters()) {
                             notification.fillPlaceholders(foundStatAmount.toString())
                         } else notification
-                    civInfo.addNotification(notificationText, LocationAction(tile?.position), stat.notificationIcon)
+                    civInfo.addNotification(notificationText, LocationAction(tile?.position), NotificationCategory.General, stat.notificationIcon)
                 }
 
                 return true
@@ -407,7 +416,7 @@ object UniqueTriggerActivation {
                         if (notification.hasPlaceholderParameters())
                             notification.fillPlaceholders(gainedFaith.toString())
                         else notification
-                    civInfo.addNotification(notificationText, LocationAction(tile?.position), NotificationIcon.Faith)
+                    civInfo.addNotification(notificationText, LocationAction(tile?.position), NotificationCategory.Religion, NotificationIcon.Faith)
                 }
 
                 return true
@@ -425,7 +434,7 @@ object UniqueTriggerActivation {
                         if (notification.hasPlaceholderParameters())
                             notification.fillPlaceholders(gainedFaith.toString())
                         else notification
-                    civInfo.addNotification(notificationText, LocationAction(tile?.position), NotificationIcon.Faith)
+                    civInfo.addNotification(notificationText, LocationAction(tile?.position), NotificationCategory.Religion, NotificationIcon.Faith)
                 }
 
                 return true
@@ -476,6 +485,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notification,
                         LocationAction(nearbyRevealableTiles),
+                        NotificationCategory.War,
                         if (unique.params[1] == Constants.barbarianEncampment)
                             NotificationIcon.Barbarians else NotificationIcon.Scout
                     )
@@ -500,6 +510,7 @@ object UniqueTriggerActivation {
                     civInfo.addNotification(
                         notification,
                         tile.position,
+                        NotificationCategory.General,
                         NotificationIcon.Ruins
                     )
                 return true
@@ -513,7 +524,7 @@ object UniqueTriggerActivation {
                             civInfo.getTurnsBetweenDiplomaticVotes()
                         )
                 if (notification != null)
-                    civInfo.addNotification(notification, NotificationIcon.Diplomacy)
+                    civInfo.addNotification(notification, NotificationCategory.General, NotificationIcon.Diplomacy)
                 return true
             }
 
@@ -527,9 +538,9 @@ object UniqueTriggerActivation {
                         otherCiv.espionageManager.erasSpyEarnedFor.add(currentEra)
                         if (otherCiv == civInfo || otherCiv.knows(civInfo))
                             // We don't tell which civilization entered the new era, as that is done in the notification directly above this one
-                            otherCiv.addNotification("We have recruited [${spyName}] as a spy!", NotificationIcon.Spy)
+                            otherCiv.addNotification("We have recruited [${spyName}] as a spy!", NotificationCategory.General, NotificationIcon.Spy)
                         else
-                            otherCiv.addNotification("After an unknown civilization entered the [${currentEra}], we have recruited [${spyName}] as a spy!", NotificationIcon.Spy)
+                            otherCiv.addNotification("After an unknown civilization entered the [${currentEra}], we have recruited [${spyName}] as a spy!", NotificationCategory.General, NotificationIcon.Spy)
                     }
                 }
                 return true
@@ -570,14 +581,14 @@ object UniqueTriggerActivation {
             OneTimeUnitHeal -> {
                 unit.healBy(unique.params[0].toInt())
                 if (notification != null)
-                    unit.civInfo.addNotification(notification, unit.getTile().position) // Do we have a heal icon?
+                    unit.civInfo.addNotification(notification, unit.getTile().position, NotificationCategory.Units) // Do we have a heal icon?
                 return true
             }
             OneTimeUnitGainXP -> {
                 if (!unit.baseUnit.isMilitary()) return false
                 unit.promotions.XP += unique.params[0].toInt()
                 if (notification != null)
-                    unit.civInfo.addNotification(notification, unit.getTile().position)
+                    unit.civInfo.addNotification(notification, unit.getTile().position, NotificationCategory.Units)
                 return true
             }
             OneTimeUnitUpgrade -> {
@@ -585,7 +596,7 @@ object UniqueTriggerActivation {
                     ?: return false
                 upgradeAction.action!!()
                 if (notification != null)
-                    unit.civInfo.addNotification(notification, unit.getTile().position)
+                    unit.civInfo.addNotification(notification, unit.getTile().position, NotificationCategory.Units)
                 return true
             }
             OneTimeUnitSpecialUpgrade -> {
@@ -593,7 +604,7 @@ object UniqueTriggerActivation {
                     ?: return false
                 upgradeAction.action!!()
                 if (notification != null)
-                    unit.civInfo.addNotification(notification, unit.getTile().position)
+                    unit.civInfo.addNotification(notification, unit.getTile().position, NotificationCategory.Units)
                 return true
             }
             OneTimeUnitGainPromotion -> {
@@ -602,7 +613,7 @@ object UniqueTriggerActivation {
                     ?: return false
                 unit.promotions.addPromotion(promotion, true)
                 if (notification != null)
-                    unit.civInfo.addNotification(notification, unit.getTile().position, unit.name)
+                    unit.civInfo.addNotification(notification, unit.getTile().position, NotificationCategory.Units, unit.name)
                 return true
             }
             else -> return false

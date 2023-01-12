@@ -13,6 +13,7 @@ import com.unciv.logic.city.RejectionReason
 import com.unciv.logic.city.RejectionReasons
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.LocationAction
+import com.unciv.logic.civilization.NotificationCategory
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.models.UnitActionType
 import com.unciv.models.helpers.UnitMovementMemoryType
@@ -759,7 +760,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
             val locations = LocationAction(tile.position, closestCity.location)
             civInfo.addNotification(
                 "Clearing a [$removedTerrainFeature] has created [$productionPointsToAdd] Production for [${closestCity.name}]",
-                locations, NotificationIcon.Construction
+                locations, NotificationCategory.Production, NotificationIcon.Construction
             )
         }
     }
@@ -855,7 +856,8 @@ class MapUnit : IsPartOfGameInfoSerialization {
             if (lostReligiousStrength != null)
                 religiousStrengthLost += lostReligiousStrength
             if (religiousStrengthLost >= baseUnit.religiousStrength) {
-                civInfo.addNotification("Your [${name}] lost its faith after spending too long inside enemy territory!", getTile().position, name)
+                civInfo.addNotification("Your [${name}] lost its faith after spending too long inside enemy territory!",
+                    getTile().position, NotificationCategory.Units, name)
                 destroy()
             }
         }
@@ -878,8 +880,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
             // For every double-stacked tile, check if our cohabitant can boost our speed
             for (unit in getTile().getUnits())
             {
-                if (unit == this)
-                    continue
+                if (unit == this) continue
 
                 if (unit.getMatchingUniques(UniqueType.TransferMovement)
                         .any { matchesFilter(it.params[0]) } )
@@ -890,8 +891,8 @@ class MapUnit : IsPartOfGameInfoSerialization {
         // Wake sleeping units if there's an enemy in vision range:
         // Military units always but civilians only if not protected.
         if (isSleeping() && (isMilitary() || (currentTile.militaryUnit == null && !currentTile.isCityCenter())) &&
-            this.viewableTiles.any {
-                it.militaryUnit != null && it.militaryUnit!!.civInfo.isAtWarWith(civInfo)
+            this.currentTile.getTilesInDistance(3).any {
+                it.militaryUnit != null && it in civInfo.viewableTiles && it.militaryUnit!!.civInfo.isAtWarWith(civInfo)
             }
         )
             action = null
@@ -957,7 +958,8 @@ class MapUnit : IsPartOfGameInfoSerialization {
 
         for (stat in gainedStats)
             civInfo.addStat(stat.key, stat.value.toInt())
-        civInfo.addNotification("By expending your [$name] you gained [${gainedStats}]!", getTile().position, name)
+        civInfo.addNotification("By expending your [$name] you gained [${gainedStats}]!",
+            getTile().position, NotificationCategory.Units, name)
     }
 
     fun removeFromTile() = currentTile.removeUnit(this)
@@ -1026,6 +1028,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
         civInfo.addNotification(
             "We have captured a barbarian encampment and recovered [${goldGained.toInt()}] gold!",
             tile.position,
+            NotificationCategory.War,
             NotificationIcon.Gold
         )
     }
@@ -1144,6 +1147,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
             civInfo.addNotification(
                 "Our [$name] took [$tileDamage] tile damage and was destroyed",
                 currentTile.position,
+                NotificationCategory.Units,
                 name,
                 NotificationIcon.Death
             )
@@ -1151,6 +1155,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
         } else if (tileDamage > 0) civInfo.addNotification(
             "Our [$name] took [$tileDamage] tile damage",
             currentTile.position,
+            NotificationCategory.Units,
             name
         )
     }
@@ -1186,17 +1191,20 @@ class MapUnit : IsPartOfGameInfoSerialization {
             civInfo.addNotification(
                 "An enemy [Citadel] has destroyed our [$name]",
                 locations,
+                NotificationCategory.War,
                 NotificationIcon.Citadel, NotificationIcon.Death, name
             )
             citadelTile.getOwner()?.addNotification(
                 "Your [Citadel] has destroyed an enemy [$name]",
                 locations,
+                NotificationCategory.War,
                 NotificationIcon.Citadel, NotificationIcon.Death, name
             )
             destroy()
         } else civInfo.addNotification(
             "An enemy [Citadel] has attacked our [$name]",
             locations,
+            NotificationCategory.War,
             NotificationIcon.Citadel, NotificationIcon.War, name
         )
     }
