@@ -11,9 +11,9 @@ import java.util.Properties
 buildscript {
     repositories {
         // Chinese mirrors for quicker loading for chinese devs - uncomment if you're chinese
-        // maven{ url = uri("https://maven.aliyun.com/repository/central") }
-        // maven{ url = uri("https://maven.aliyun.com/repository/google") }
-        // maven{ url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven{ url = uri("https://maven.aliyun.com/repository/central") }
+        maven{ url = uri("https://maven.aliyun.com/repository/google") }
+        maven{ url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         mavenCentral()
         google()  // needed for com.android.tools.build:gradle
         maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") }
@@ -83,8 +83,8 @@ allprojects {
 
     repositories {
         // Chinese mirrors for quicker loading for chinese devs - uncomment if you're chinese
-        // maven{ url = uri("https://maven.aliyun.com/repository/central") }
-        // maven{ url = uri("https://maven.aliyun.com/repository/google") }
+        maven{ url = uri("https://maven.aliyun.com/repository/central") }
+        maven{ url = uri("https://maven.aliyun.com/repository/google") }
         mavenCentral()
         google()
         maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") }
